@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-If you find a security issue in OmniPrism, **please do not file a public
+If you find a security issue in PolyPrism, **please do not file a public
 GitHub issue.**
 
 Instead, email **travis.fitzgerald@zonos.com** with:
@@ -17,7 +17,7 @@ within one week. Critical issues get a patch release as soon as one's ready.
 
 ## Supported versions
 
-OmniPrism is pre-1.0. Only the **latest minor release line** receives
+PolyPrism is pre-1.0. Only the **latest minor release line** receives
 security fixes. Once 1.0 ships this policy will expand.
 
 ## Scope
@@ -34,4 +34,4 @@ Out of scope:
 - Issues in `prisma` / `@prisma/client` itself — report those upstream.
 - The contents of a user's `schema.prisma` (we generate what you give us).
 - Dependency vulnerabilities flagged in transitive devDeps (we don't ship
-  runtime dependencies on any published `@omniprism/*` package).
+  runtime dependencies on any published `@polyprism/*` package).

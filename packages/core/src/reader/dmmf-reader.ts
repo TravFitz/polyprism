@@ -1,4 +1,4 @@
-// DMMF → OmniPrism IR.
+// DMMF → PolyPrism IR.
 //
 // ⚠️ This is the single isolation point for Prisma's `@prisma/generator-helper`.
 // DMMF is officially unstable; when Prisma ships its stable generator API
@@ -16,7 +16,7 @@ import type {
   IndexDef,
   ModelDef,
   NativeType,
-  OmniPrismIR,
+  PolyPrismIR,
   PrimaryKeyDef,
   ReferentialAction,
   ScalarType,
@@ -177,12 +177,12 @@ function readEnum(dmmfEnum: DMMF.DatamodelEnum): EnumDef {
 }
 
 /**
- * Read a Prisma DMMF Document into OmniPrism's intermediate representation.
+ * Read a Prisma DMMF Document into PolyPrism's intermediate representation.
  *
  * The returned IR has unparsed annotations (all empty) — run the annotation
  * parser (Task 3) over the IR to populate `annotations` from `documentation`.
  */
-export function readDmmf(document: DMMF.Document): OmniPrismIR {
+export function readDmmf(document: DMMF.Document): PolyPrismIR {
   return {
     models: document.datamodel.models.map(readModel),
     enums: document.datamodel.enums.map(readEnum),

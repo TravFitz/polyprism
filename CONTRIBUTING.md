@@ -1,4 +1,4 @@
-# Contributing to OmniPrism
+# Contributing to PolyPrism
 
 Thanks for your interest! This guide covers the day-to-day: setting up the
 repo, running things locally, and getting a change merged.
@@ -15,7 +15,7 @@ By participating you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 ## Repo layout
 
 ```
-omniprism/
+polyprism/
 ├── packages/
 │   ├── core/              # Language-agnostic IR, DMMF reader, annotation parser
 │   ├── ts-shared/         # TS-specific renderers shared across all ts-* patterns
@@ -28,8 +28,8 @@ omniprism/
 ```
 
 **Architecture rule:** DMMF (Prisma's officially-unstable internal metadata
-format) is **never** allowed to leak past `@omniprism/core/src/reader/`.
-Pattern packages consume only OmniPrism's IR. This is what lets every
+format) is **never** allowed to leak past `@polyprism/core/src/reader/`.
+Pattern packages consume only PolyPrism's IR. This is what lets every
 published package have zero third-party runtime dependencies.
 
 ## Common commands
@@ -55,7 +55,7 @@ pnpm format               # auto-fix formatting
 ## Regenerating the examples
 
 ```bash
-pnpm -F "omniprism-example-*" generate
+pnpm -F "polyprism-example-*" generate
 ```
 
 This invokes `prisma generate` against each example schema and writes the
@@ -102,19 +102,19 @@ changeset — there's nothing to ship.
 ## Adding a new pattern
 
 The pattern packages are deliberately thin (~10 lines each) — almost
-everything lives in `@omniprism/ts-shared`. To add a new pattern:
+everything lives in `@polyprism/ts-shared`. To add a new pattern:
 
 1. Create `packages/ts-<name>/` mirroring an existing pattern's structure
    (`package.json`, `tsconfig.json`, `tsup.config.ts`, `src/index.ts`,
    `src/generator.ts`).
 2. The `bin` name in `package.json` must NOT contain `/`, so use
-   `omniprism-ts-<name>` (not `@omniprism/ts-<name>`).
+   `polyprism-ts-<name>` (not `@polyprism/ts-<name>`).
 3. If the pattern shares the existing field-rendering logic, add it to
    `DeclarationStyle` in `packages/ts-shared/src/render-model.ts` and wire
    the new case there. The wrapper package then becomes:
 
    ```ts
-   import { emitModels } from "@omniprism/ts-shared";
+   import { emitModels } from "@polyprism/ts-shared";
    export const emit = (ctx) => emitModels(ctx, { declarationStyle: "<name>" });
    ```
 
@@ -155,5 +155,5 @@ handles it.
 
 ## Questions?
 
-Open a [Discussion](https://github.com/TravFitz/omniprism/discussions) or
+Open a [Discussion](https://github.com/TravFitz/polyprism/discussions) or
 file an issue. We're friendly. Mostly.

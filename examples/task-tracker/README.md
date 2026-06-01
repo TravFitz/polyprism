@@ -8,7 +8,7 @@ filling in every field by hand.
 - **3 models**: `User`, `Project`, `Task`
 - **3 enums**: `TaskStatus`, `Priority`, `Role`
 - **1 inline JSON type**: `ProjectSettings`
-- **Pattern**: `omniprism-ts-class`
+- **Pattern**: `polyprism-ts-class`
 - **Index barrel**: on (`emitIndex = "true"`)
 
 ## What this example demonstrates
@@ -29,14 +29,14 @@ filling in every field by hand.
 
 The integer-default-Date bug in `prisma-class-generator` (an `Int @default(90)`
 on a `DateTime` field got fed to `Date.parse("90")`) is fixed at the source:
-OmniPrism only emits a literal default when the literal kind matches the
+PolyPrism only emits a literal default when the literal kind matches the
 scalar kind. Mismatches fall through to `!` instead of fabricating a value.
 
 ## Schema
 
 ```prisma
-generator omniprismCodegen {
-  provider  = "omniprism-ts-class"
+generator polyprismCodegen {
+  provider  = "polyprism-ts-class"
   output    = "../generated"
   emitIndex = "true"
 }
@@ -131,7 +131,7 @@ model Task {
 
 ```bash
 pnpm install         # from the repo root
-pnpm -F omniprism-example-task-tracker generate
+pnpm -F polyprism-example-task-tracker generate
 ```
 
 Generated files appear in `generated/`:
@@ -190,7 +190,7 @@ runtime values (no `type` keyword) because they're referenced as
 import { Task, TaskStatus, Priority } from "./generated/index.js";
 
 const t = new Task();
-t.title = "Wire up the OmniPrism CI matrix";
+t.title = "Wire up the PolyPrism CI matrix";
 t.status = TaskStatus.IN_PROGRESS;
 t.priority = Priority.HIGH;
 // id / createdAt / updatedAt come from Prisma at insert time — left as `!`.

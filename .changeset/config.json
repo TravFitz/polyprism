@@ -2,14 +2,14 @@
   "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [["@omniprism/*"]],
+  "fixed": [["@polyprism/*"]],
   "linked": [],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": [
-    "omniprism-example-simple-blog",
-    "omniprism-example-task-tracker",
-    "omniprism-example-complex-ecommerce"
+    "polyprism-example-simple-blog",
+    "polyprism-example-task-tracker",
+    "polyprism-example-complex-ecommerce"
   ]
 }

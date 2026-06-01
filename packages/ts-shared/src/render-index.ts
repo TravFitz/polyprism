@@ -7,8 +7,8 @@
 //
 // Enums are always runtime values; JSON types are always type-only.
 
-import type { GeneratorContext } from "@omniprism/core";
-import { autoNameInlineJson, resolveTypeFilename, resolveTypeIdent } from "@omniprism/core";
+import type { GeneratorContext } from "@polyprism/core";
+import { autoNameInlineJson, resolveTypeFilename, resolveTypeIdent } from "@polyprism/core";
 
 import type { DeclarationStyle } from "./render-model.js";
 

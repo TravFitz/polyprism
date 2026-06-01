@@ -1,5 +1,5 @@
 // Complex e-commerce example.
-// Designed to exercise every OmniPrism feature in one schema:
+// Designed to exercise every PolyPrism feature in one schema:
 //   - All scalar types (String, Int, BigInt, Float, Decimal, DateTime, Json, Boolean)
 //   - All 4 @json annotation forms (bare, with-path, inline-anonymous, inline-named)
 //   - @hide, @deprecated (on fields, models, enum values)
@@ -10,8 +10,8 @@
 //   - @db.* native types (Decimal precision)
 //   - Composite uniques + indexes
 
-generator omniprismCodegen {
-  provider     = "omniprism-ts-interface"
+generator polyprismCodegen {
+  provider     = "polyprism-ts-interface"
   output       = "../generated"
   fileNaming   = "PascalCase"
   typeNaming   = "PascalCase"

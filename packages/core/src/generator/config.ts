@@ -1,5 +1,5 @@
 // Parse the generator-block `config` field (a Record<string, string | string[]>)
-// into a strongly-typed OmniPrismConfig. Unknown keys are ignored; invalid
+// into a strongly-typed PolyPrismConfig. Unknown keys are ignored; invalid
 // values fall back to defaults silently in v0.1 (we can add warnings later).
 
 import type {
@@ -10,7 +10,7 @@ import type {
 } from "../naming/types.js";
 import { DEFAULT_NAMING } from "../naming/types.js";
 
-export interface OmniPrismConfig {
+export interface PolyPrismConfig {
   readonly naming: NamingConfig;
   readonly emitIndex: boolean;
 }
@@ -38,7 +38,7 @@ const FIELD_NAMING_VALUES: ReadonlySet<FieldNamingConvention> = new Set([
 
 export type RawGeneratorConfig = Record<string, string | string[] | undefined>;
 
-export function parseGeneratorConfig(raw: RawGeneratorConfig): OmniPrismConfig {
+export function parseGeneratorConfig(raw: RawGeneratorConfig): PolyPrismConfig {
   return {
     naming: {
       fileNaming: pickEnum(raw, "fileNaming", FILE_NAMING_VALUES, DEFAULT_NAMING.fileNaming),

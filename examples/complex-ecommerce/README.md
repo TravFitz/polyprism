@@ -1,6 +1,6 @@
 # complex-ecommerce example
 
-A schema designed to exercise **every** OmniPrism feature in one place.
+A schema designed to exercise **every** PolyPrism feature in one place.
 
 ## What's in here
 
@@ -23,7 +23,7 @@ A schema designed to exercise **every** OmniPrism feature in one place.
 
 ```bash
 pnpm install         # from the repo root
-pnpm -F omniprism-example-complex-ecommerce generate
+pnpm -F polyprism-example-complex-ecommerce generate
 ```
 
 Generated files appear in `generated/`:

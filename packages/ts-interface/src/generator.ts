@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// Prisma generator entry point for @omniprism/ts-interface.
+// Prisma generator entry point for @polyprism/ts-interface.
 
-import { defineGenerator } from "@omniprism/core";
+import { defineGenerator } from "@polyprism/core";
 
 import { emit } from "./index.js";
 
 defineGenerator({
   manifest: {
-    prettyName: "OmniPrism TypeScript Interface",
+    prettyName: "PolyPrism TypeScript Interface",
     defaultOutput: "./generated",
   },
   onGenerate: emit,

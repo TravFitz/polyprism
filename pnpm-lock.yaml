@@ -29,7 +29,7 @@ importers:
 
   examples/complex-ecommerce:
     dependencies:
-      '@omniprism/ts-interface':
+      '@polyprism/ts-interface':
         specifier: workspace:*
         version: link:../../packages/ts-interface
     devDependencies:
@@ -39,7 +39,7 @@ importers:
 
   examples/simple-blog:
     dependencies:
-      '@omniprism/ts-type':
+      '@polyprism/ts-type':
         specifier: workspace:*
         version: link:../../packages/ts-type
     devDependencies:
@@ -49,7 +49,7 @@ importers:
 
   examples/task-tracker:
     dependencies:
-      '@omniprism/ts-class':
+      '@polyprism/ts-class':
         specifier: workspace:*
         version: link:../../packages/ts-class
     devDependencies:
@@ -65,34 +65,34 @@ importers:
 
   packages/ts-class:
     dependencies:
-      '@omniprism/core':
+      '@polyprism/core':
         specifier: workspace:*
         version: link:../core
-      '@omniprism/ts-shared':
+      '@polyprism/ts-shared':
         specifier: workspace:*
         version: link:../ts-shared
 
   packages/ts-interface:
     dependencies:
-      '@omniprism/core':
+      '@polyprism/core':
         specifier: workspace:*
         version: link:../core
-      '@omniprism/ts-shared':
+      '@polyprism/ts-shared':
         specifier: workspace:*
         version: link:../ts-shared
 
   packages/ts-shared:
     dependencies:
-      '@omniprism/core':
+      '@polyprism/core':
         specifier: workspace:*
         version: link:../core
 
   packages/ts-type:
     dependencies:
-      '@omniprism/core':
+      '@polyprism/core':
         specifier: workspace:*
         version: link:../core
-      '@omniprism/ts-shared':
+      '@polyprism/ts-shared':
         specifier: workspace:*
         version: link:../ts-shared
 

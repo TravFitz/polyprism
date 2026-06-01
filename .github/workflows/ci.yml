@@ -51,7 +51,7 @@ jobs:
         run: pnpm build
 
   # The point of this matrix is to catch DMMF divergences between Prisma
-  # majors — DMMF is officially unstable and is exactly the thing OmniPrism
+  # majors — DMMF is officially unstable and is exactly the thing PolyPrism
   # has to be robust against. Each matrix cell regenerates every example
   # schema with `prisma generate`, then typechecks the output.
   #
@@ -89,7 +89,7 @@ jobs:
         # target (e.g. `./dist/generator.js`) doesn't exist yet at install
         # time. It logs a `WARN Failed to create bin at ...` and continues
         # without the symlink — which then makes `prisma generate` fail with
-        # `/bin/sh: omniprism-ts-X: not found` even after we build below.
+        # `/bin/sh: polyprism-ts-X: not found` even after we build below.
         # The fix is a second install after build (further down) to re-link
         # the bins now that their targets exist.
         run: pnpm install --frozen-lockfile
@@ -97,7 +97,7 @@ jobs:
       - name: Pin Prisma to ^${{ matrix.prisma }}.0.0 across the workspace
         run: pnpm -r update "prisma@^${{ matrix.prisma }}.0.0"
 
-      - name: Build OmniPrism packages
+      - name: Build PolyPrism packages
         run: pnpm build
 
       - name: Re-link workspace bins now that dist/ exists
@@ -133,7 +133,7 @@ jobs:
           done
 
       - name: Regenerate every example schema
-        run: pnpm -F "omniprism-example-*" generate
+        run: pnpm -F "polyprism-example-*" generate
 
       - name: Typecheck the generated output
         # Each self-contained example's generated/ directory must compile

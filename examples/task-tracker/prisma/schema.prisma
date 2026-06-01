@@ -9,16 +9,16 @@
 //     there's no stable TS literal to put there.
 //   - Literal defaults that map cleanly to TS (`Int`, `Float`, `String`,
 //     `Boolean`, enum values) emit as `field: Type = literal;`.
-//   - Enum-value defaults trigger OmniPrism's mixed type/value import
+//   - Enum-value defaults trigger PolyPrism's mixed type/value import
 //     handling: the import line becomes `import { type X, EnumName }` so the
 //     `EnumName.VALUE` reference resolves at runtime.
 //   - Nullable scalars without a default initialize to `null`.
 //   - Lists always initialize to `[]` (Prisma never returns null for lists).
 //
-// Pattern: `omniprism-ts-class`.
+// Pattern: `polyprism-ts-class`.
 
-generator omniprismCodegen {
-  provider  = "omniprism-ts-class"
+generator polyprismCodegen {
+  provider  = "polyprism-ts-class"
   output    = "../generated"
   emitIndex = "true"
 }

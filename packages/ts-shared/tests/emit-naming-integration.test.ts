@@ -16,8 +16,8 @@ import {
   type GeneratorContext,
   type ModelDef,
   type NamingConfig,
-  type OmniPrismIR,
-} from "@omniprism/core";
+  type PolyPrismIR,
+} from "@polyprism/core";
 import { describe, expect, it } from "vitest";
 
 import { emitModels } from "../src/emit-models.js";
@@ -76,7 +76,7 @@ function enumDef(name: string, values: string[]): EnumDef {
 // Fixture: schema names are PascalCase model / lowercase fields / PascalCase
 // enum. Each axis gets a distinct convention so it's obvious which axis
 // drives which part of the output.
-function buildIR(): OmniPrismIR {
+function buildIR(): PolyPrismIR {
   return {
     models: [
       model("UserProfile", [

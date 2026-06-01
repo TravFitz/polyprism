@@ -1,18 +1,18 @@
-# @omniprism/ts-interface
+# @polyprism/ts-interface
 
 ## 0.1.0
 
 ### Minor Changes
 
-- Initial public release of OmniPrism — a multi-pattern Prisma type generator.
+- Initial public release of PolyPrism — a multi-pattern Prisma type generator.
 
   ### What's in v0.1
 
-  - **`@omniprism/core`** — language-agnostic IR, DMMF reader, annotation parser, and naming layer. Zero third-party runtime dependencies.
-  - **`@omniprism/ts-shared`** — TypeScript-specific rendering primitives shared across the three pattern emitters.
-  - **`@omniprism/ts-interface`** — emits `export interface User { ... }` types.
-  - **`@omniprism/ts-type`** — emits `export type User = { ... };` aliases.
-  - **`@omniprism/ts-class`** — emits `export class User { ... }` with public fields. A replacement for the abandoned `prisma-class-generator`.
+  - **`@polyprism/core`** — language-agnostic IR, DMMF reader, annotation parser, and naming layer. Zero third-party runtime dependencies.
+  - **`@polyprism/ts-shared`** — TypeScript-specific rendering primitives shared across the three pattern emitters.
+  - **`@polyprism/ts-interface`** — emits `export interface User { ... }` types.
+  - **`@polyprism/ts-type`** — emits `export type User = { ... };` aliases.
+  - **`@polyprism/ts-class`** — emits `export class User { ... }` with public fields. A replacement for the abandoned `prisma-class-generator`.
 
   ### Features
 
@@ -32,5 +32,5 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @omniprism/core@0.1.0
-  - @omniprism/ts-shared@0.1.0
+  - @polyprism/core@0.1.0
+  - @polyprism/ts-shared@0.1.0

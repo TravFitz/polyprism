@@ -9,7 +9,7 @@ import {
   type FieldDef,
   type GeneratorContext,
   type ModelDef,
-} from "@omniprism/core";
+} from "@polyprism/core";
 import { describe, expect, it } from "vitest";
 
 import { emitModels } from "../src/emit-models.js";

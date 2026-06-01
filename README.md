@@ -1,16 +1,16 @@
-# OmniPrism
+# PolyPrism
 
 > One Prisma schema. Many shapes. Pick your output by changing a single
 > config string.
 
-OmniPrism is a [Prisma](https://www.prisma.io) generator that emits
+PolyPrism is a [Prisma](https://www.prisma.io) generator that emits
 TypeScript types from your `schema.prisma` in whichever shape fits the layer
 you're writing: interface, type alias, or plain class today — domain class
 with getters/setters, Zod, Valibot, ArkType, and TypeBox on the roadmap.
 
 ```prisma
-generator omniprismCodegen {
-  provider = "omniprism-ts-interface"  // or ts-type / ts-class
+generator polyprismCodegen {
+  provider = "polyprism-ts-interface"  // or ts-type / ts-class
   output   = "../generated"
 }
 ```
@@ -26,7 +26,7 @@ layer and classes for your domain layer), you end up with multiple generator
 blocks, duplicated config, and naming conventions that have to be kept in
 sync by hand.
 
-OmniPrism takes a different shape:
+PolyPrism takes a different shape:
 
 - **One generator, many outputs.** Pick the pattern with a single `provider`
   string. Naming, JSON-type handling, enum emission, and annotation behaviour
@@ -37,9 +37,9 @@ OmniPrism takes a different shape:
   both. Example fixtures use the modern Prisma 7 schema layout (`url` in
   `prisma.config.ts`).
 - **Zero third-party runtime dependencies on published packages.** Each
-  `@omniprism/*` pattern package depends only on `@omniprism/core`, which in
+  `@polyprism/*` pattern package depends only on `@polyprism/core`, which in
   turn has no third-party runtime deps. The generated code imports nothing
-  from OmniPrism. Drop the generator and your output keeps compiling.
+  from PolyPrism. Drop the generator and your output keeps compiling.
 
 It's a generator I wanted for my own work and couldn't find off the shelf —
 if any of the above lines up with what you're after, give it a spin.
@@ -55,18 +55,18 @@ if any of the above lines up with what you're after, give it a spin.
 - **`@db.X(p, s)` precision** captured as JSDoc so the schema-level info isn't lost.
 - **Optional barrel** (`emitIndex = true`) with class-mode awareness (`export { User }` vs. `export type { User }` based on the pattern).
 - **Pretty-formatted inline JSON types** — multi-property objects emitted from `@json({ ... })` are broken onto multiple lines for readability instead of collapsed onto one.
-- **Zero third-party runtime dependencies** on any published `@omniprism/*` package.
+- **Zero third-party runtime dependencies** on any published `@polyprism/*` package.
 
 ## Quick start
 
 ```bash
-pnpm add -D prisma @omniprism/ts-interface
+pnpm add -D prisma @polyprism/ts-interface
 ```
 
 ```prisma
 // prisma/schema.prisma
-generator omniprismCodegen {
-  provider = "omniprism-ts-interface"
+generator polyprismCodegen {
+  provider = "polyprism-ts-interface"
   output   = "../app/types/generated"
 }
 
@@ -120,9 +120,9 @@ Same model. Swap the provider. That's it.
 
 <table>
 <tr>
-<th align="left"><code>omniprism-ts-interface</code></th>
-<th align="left"><code>omniprism-ts-type</code></th>
-<th align="left"><code>omniprism-ts-class</code></th>
+<th align="left"><code>polyprism-ts-interface</code></th>
+<th align="left"><code>polyprism-ts-type</code></th>
+<th align="left"><code>polyprism-ts-class</code></th>
 </tr>
 <tr>
 <td>
@@ -226,7 +226,7 @@ global rule for that one identifier.
 
 ## How does this compare to ___?
 
-| | OmniPrism | prisma-class-generator | zod-prisma-types | prismabox |
+| | PolyPrism | prisma-class-generator | zod-prisma-types | prismabox |
 |---|---|---|---|---|
 | Multi-pattern from one config | ✅ | ❌ (classes only) | ❌ (Zod only) | ❌ (TypeBox only) |
 | Prisma 7 native (ESM-only) | ✅ | ❌ | ⚠️ | ⚠️ |

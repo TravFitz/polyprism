@@ -1,4 +1,4 @@
-// Walk an OmniPrism IR and enrich every node's annotations by parsing
+// Walk an PolyPrism IR and enrich every node's annotations by parsing
 // its `documentation` string. Returns a new IR — the input is not mutated.
 
 import type {
@@ -7,11 +7,11 @@ import type {
   EnumValueDef,
   FieldDef,
   ModelDef,
-  OmniPrismIR,
+  PolyPrismIR,
 } from "../ir/types.js";
 import { parseAnnotations } from "./parser.js";
 
-export function enrichAnnotations(ir: OmniPrismIR): OmniPrismIR {
+export function enrichAnnotations(ir: PolyPrismIR): PolyPrismIR {
   return {
     models: ir.models.map(enrichModel),
     enums: ir.enums.map(enrichEnum),

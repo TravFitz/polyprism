@@ -20,4 +20,4 @@
 - [ ] `pnpm build` passes locally
 - [ ] Added a `.changeset/*.md` entry if the change is user-visible
 - [ ] Updated relevant docs (README / per-package README / examples) if behaviour or API changed
-- [ ] The change does not introduce a new runtime dependency on any published `@omniprism/*` package
+- [ ] The change does not introduce a new runtime dependency on any published `@polyprism/*` package

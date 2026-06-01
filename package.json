@@ -1,5 +1,5 @@
 {
-  "name": "omniprism",
+  "name": "polyprism",
   "private": true,
   "version": "0.0.0",
   "description": "Multi-pattern Prisma type generator. Pick your output (interface, type, class, domain-class, zod, ...) via one config knob.",
@@ -10,13 +10,13 @@
   },
   "license": "MIT",
   "author": "Travis Fitzgerald",
-  "homepage": "https://github.com/TravFitz/omniprism",
+  "homepage": "https://github.com/TravFitz/polyprism",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TravFitz/omniprism.git"
+    "url": "git+https://github.com/TravFitz/polyprism.git"
   },
   "bugs": {
-    "url": "https://github.com/TravFitz/omniprism/issues"
+    "url": "https://github.com/TravFitz/polyprism/issues"
   },
   "scripts": {
     "build": "pnpm -r build",

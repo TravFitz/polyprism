@@ -1,6 +1,6 @@
-# @omniprism/ts-class
+# @polyprism/ts-class
 
-TypeScript **class** emitter for [OmniPrism](https://github.com/TravFitz/omniprism).
+TypeScript **class** emitter for [PolyPrism](https://github.com/TravFitz/polyprism).
 Emits plain classes with public fields from your Prisma schema. A modern,
 maintained, ESM-native replacement for the abandoned
 [`prisma-class-generator`](https://github.com/kimjbstar/prisma-class-generator).
@@ -8,14 +8,14 @@ maintained, ESM-native replacement for the abandoned
 ## Install
 
 ```bash
-pnpm add -D prisma @omniprism/ts-class
+pnpm add -D prisma @polyprism/ts-class
 ```
 
 ## Configure
 
 ```prisma
-generator omniprismCodegen {
-  provider = "omniprism-ts-class"
+generator polyprismCodegen {
+  provider = "polyprism-ts-class"
   output   = "../generated"
 }
 ```
@@ -85,23 +85,23 @@ t.priority = Priority.HIGH;
    }
 
    // after
-   generator omniprismCodegen {
-     provider = "omniprism-ts-class"
+   generator polyprismCodegen {
+     provider = "polyprism-ts-class"
      output   = "../generated"
    }
    ```
 
 2. Audit any `Decimal` fields. `prisma-class-generator` emitted them as
-   `number` (silently wrong); OmniPrism emits the actual `Decimal` type from
+   `number` (silently wrong); PolyPrism emits the actual `Decimal` type from
    `@prisma/client/runtime/library`. Code that was treating Decimal-as-number
    may need `.toNumber()` or `.toString()` calls at boundaries.
 
-3. Delete any manual enum mirror files. OmniPrism always emits standalone
+3. Delete any manual enum mirror files. PolyPrism always emits standalone
    ESM enum files at `<output>/enums/`.
 
 ## Config options + annotations
 
-See the [root README](https://github.com/TravFitz/omniprism) for the full
+See the [root README](https://github.com/TravFitz/polyprism) for the full
 config reference and annotation grammar.
 
 ## License

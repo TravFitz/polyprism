@@ -1,27 +1,27 @@
 {
-  "name": "@omniprism/ts-type",
+  "name": "@polyprism/ts-type",
   "version": "0.1.0",
-  "description": "TypeScript type alias emitter for OmniPrism. Emits `export type User = { ... }` types from your Prisma schema.",
+  "description": "TypeScript type alias emitter for PolyPrism. Emits `export type User = { ... }` types from your Prisma schema.",
   "type": "module",
   "license": "MIT",
   "author": "Travis Fitzgerald",
-  "homepage": "https://github.com/TravFitz/omniprism/tree/main/packages/ts-type",
+  "homepage": "https://github.com/TravFitz/polyprism/tree/main/packages/ts-type",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TravFitz/omniprism.git",
+    "url": "git+https://github.com/TravFitz/polyprism.git",
     "directory": "packages/ts-type"
   },
   "bugs": {
-    "url": "https://github.com/TravFitz/omniprism/issues"
+    "url": "https://github.com/TravFitz/polyprism/issues"
   },
   "bin": {
-    "omniprism-ts-type": "./dist/generator.js"
+    "polyprism-ts-type": "./dist/generator.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "omniprism-source": {
+      "polyprism-source": {
         "types": "./src/index.ts",
         "import": "./src/index.ts"
       },
@@ -42,7 +42,7 @@
     "typescript",
     "type-alias",
     "codegen",
-    "omniprism"
+    "polyprism"
   ],
   "scripts": {
     "build": "tsup",
@@ -51,7 +51,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@omniprism/core": "workspace:*",
-    "@omniprism/ts-shared": "workspace:*"
+    "@polyprism/core": "workspace:*",
+    "@polyprism/ts-shared": "workspace:*"
   }
 }

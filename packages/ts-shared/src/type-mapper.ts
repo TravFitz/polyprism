@@ -8,8 +8,8 @@
 // All paths funnel through wrapNullability() so list-ness and nullability
 // are applied consistently at the end.
 
-import type { FieldDef, NamingConfig, ScalarType } from "@omniprism/core";
-import { autoNameInlineJson, resolveTypeFilename } from "@omniprism/core";
+import type { FieldDef, NamingConfig, ScalarType } from "@polyprism/core";
+import { autoNameInlineJson, resolveTypeFilename } from "@polyprism/core";
 
 import type { ImportCollector } from "./imports.js";
 

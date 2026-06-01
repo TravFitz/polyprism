@@ -1,19 +1,19 @@
-# @omniprism/ts-type
+# @polyprism/ts-type
 
-TypeScript **type alias** emitter for [OmniPrism](https://github.com/TravFitz/omniprism).
+TypeScript **type alias** emitter for [PolyPrism](https://github.com/TravFitz/polyprism).
 Emits `export type User = { ... };` types from your Prisma schema.
 
 ## Install
 
 ```bash
-pnpm add -D prisma @omniprism/ts-type
+pnpm add -D prisma @polyprism/ts-type
 ```
 
 ## Configure
 
 ```prisma
-generator omniprismCodegen {
-  provider = "omniprism-ts-type"
+generator polyprismCodegen {
+  provider = "polyprism-ts-type"
   output   = "../generated"
 }
 ```
@@ -49,12 +49,12 @@ in a few edge cases:
 - `interface` is open to declaration merging; `type` is closed.
 - Some teams prefer one for stylistic consistency.
 
-If you don't have a strong preference, [`@omniprism/ts-interface`](https://www.npmjs.com/package/@omniprism/ts-interface)
+If you don't have a strong preference, [`@polyprism/ts-interface`](https://www.npmjs.com/package/@polyprism/ts-interface)
 is the more conventional choice.
 
 ## Config options + annotations
 
-See the [root README](https://github.com/TravFitz/omniprism) for the full
+See the [root README](https://github.com/TravFitz/polyprism) for the full
 config reference and annotation grammar — they're identical across all
 `ts-*` patterns.
 

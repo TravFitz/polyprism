@@ -1,26 +1,26 @@
-# @omniprism/ts-interface
+# @polyprism/ts-interface
 
-TypeScript **interface** emitter for [OmniPrism](https://github.com/TravFitz/omniprism).
+TypeScript **interface** emitter for [PolyPrism](https://github.com/TravFitz/polyprism).
 Emits `export interface User { ... }` types from your Prisma schema.
 
 ## Install
 
 ```bash
-pnpm add -D prisma @omniprism/ts-interface
+pnpm add -D prisma @polyprism/ts-interface
 ```
 
 ## Configure
 
 ```prisma
-generator omniprismCodegen {
-  provider = "omniprism-ts-interface"
+generator polyprismCodegen {
+  provider = "polyprism-ts-interface"
   output   = "../generated"
 }
 ```
 
 > ⚠️ The provider string is the **bin name** (no `@scope/` prefix). Bin
-> names can't contain `/`, so you write `omniprism-ts-interface`, not
-> `@omniprism/ts-interface`.
+> names can't contain `/`, so you write `polyprism-ts-interface`, not
+> `@polyprism/ts-interface`.
 
 ## Run
 
@@ -44,7 +44,7 @@ export interface User {
 
 ## Config options
 
-All keys go on the `generator omniprismCodegen { ... }` block:
+All keys go on the `generator polyprismCodegen { ... }` block:
 
 | Key | Default | Options |
 |---|---|---|
@@ -56,7 +56,7 @@ All keys go on the `generator omniprismCodegen { ... }` block:
 
 ## Annotations
 
-See the [root README](https://github.com/TravFitz/omniprism#annotation-reference)
+See the [root README](https://github.com/TravFitz/polyprism#annotation-reference)
 for the seven supported `///` annotations: `@hide`, `@deprecated`, `@json`
 (four forms), `@type`, `@name`, `@normalise`, `@coerce`.
 
@@ -64,8 +64,8 @@ for the seven supported `///` annotations: `@hide`, `@deprecated`, `@json`
 
 Same schema, different output shape — just swap the provider:
 
-- [`@omniprism/ts-type`](https://www.npmjs.com/package/@omniprism/ts-type) — `export type User = { ... };`
-- [`@omniprism/ts-class`](https://www.npmjs.com/package/@omniprism/ts-class) — `export class User { ... }` with real initializer expressions
+- [`@polyprism/ts-type`](https://www.npmjs.com/package/@polyprism/ts-type) — `export type User = { ... };`
+- [`@polyprism/ts-class`](https://www.npmjs.com/package/@polyprism/ts-class) — `export class User { ... }` with real initializer expressions
 
 ## License
 

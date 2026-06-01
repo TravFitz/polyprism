@@ -15,7 +15,7 @@ import {
   type FieldType,
   type GeneratorContext,
   type ModelDef,
-} from "@omniprism/core";
+} from "@polyprism/core";
 import { describe, expect, it } from "vitest";
 
 import { emitModels } from "../src/emit-models.js";
@@ -327,7 +327,7 @@ describe('declarationStyle: "class" — mismatched literal/scalar (the integer-d
   it("refuses to coerce a number-literal default onto a DateTime field — uses `!` instead", async () => {
     // This is the prisma-class-generator bug: an Int @default(90) on a
     // DateTime field got fed to `Date.parse("90")`, yielding NaN-time.
-    // OmniPrism must instead fall through to `!`.
+    // PolyPrism must instead fall through to `!`.
     const { ctx, writer } = makeContext([
       model("Quirky", [
         field("notADate", scalar("DateTime"), {

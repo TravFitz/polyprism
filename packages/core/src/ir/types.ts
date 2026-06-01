@@ -1,4 +1,4 @@
-// Language-agnostic intermediate representation for OmniPrism.
+// Language-agnostic intermediate representation for PolyPrism.
 // Designed so a future PHP (or Go, Rust, ...) emitter can consume the same IR
 // without needing to understand DMMF.
 
@@ -133,7 +133,7 @@ export interface EnumDef {
   readonly annotations: AnnotationSet;
 }
 
-export interface OmniPrismIR {
+export interface PolyPrismIR {
   readonly models: readonly ModelDef[];
   readonly enums: readonly EnumDef[];
 }

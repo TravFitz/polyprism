@@ -11,7 +11,7 @@ labels: enhancement
 
 ## Proposed solution
 
-<!-- What should OmniPrism do? Be specific:
+<!-- What should PolyPrism do? Be specific:
      - New annotation? Show the syntax.
      - New config key? Show where it goes on the generator block.
      - New output pattern? Sketch the emitted code. -->

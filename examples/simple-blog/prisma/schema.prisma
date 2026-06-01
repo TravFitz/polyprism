@@ -1,13 +1,13 @@
 // Simple blog example.
 // Three models + one enum + basic relations. No annotations — everything
-// runs on OmniPrism's defaults so you can see what zero-config looks like.
+// runs on PolyPrism's defaults so you can see what zero-config looks like.
 //
 // Uses the ts-type pattern: `export type X = { ... };` (type aliases instead
 // of interfaces). Same fields, same imports, same naming — just a different
 // declaration syntax.
 
-generator omniprismCodegen {
-  provider  = "omniprism-ts-type"
+generator polyprismCodegen {
+  provider  = "polyprism-ts-type"
   output    = "../generated"
   emitIndex = "true"
 }

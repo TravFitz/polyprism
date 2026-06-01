@@ -1,7 +1,7 @@
 // Collects imports during rendering, deduplicates, and emits a sorted import
 // block at the top of each generated file.
 //
-// Most names emitted by OmniPrism are used purely as types (interfaces, type
+// Most names emitted by PolyPrism are used purely as types (interfaces, type
 // aliases, type annotations on class fields). A handful are used as runtime
 // values — most notably enum defaults in class mode, where the class body
 // contains `field: Status = Status.PENDING`. We track type-vs-value usage

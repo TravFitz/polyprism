@@ -7,7 +7,7 @@
 //   - `getManifest` — generator describes itself
 //   - `generate`    — generator does the codegen work
 //
-// Vendored intentionally (~80 lines) so @omniprism/* packages have zero
+// Vendored intentionally (~80 lines) so @polyprism/* packages have zero
 // third-party runtime deps. If Prisma changes the protocol in the future,
 // this is the single file to update.
 
@@ -60,7 +60,7 @@ async function handleLine(line: string, handlers: JsonRpcHandlers): Promise<void
   try {
     req = JSON.parse(trimmed) as JsonRpcRequest;
   } catch {
-    process.stderr.write(`OmniPrism: failed to parse JSON-RPC request: ${trimmed}\n`);
+    process.stderr.write(`PolyPrism: failed to parse JSON-RPC request: ${trimmed}\n`);
     return;
   }
 

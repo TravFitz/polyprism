@@ -17,9 +17,9 @@ import {
   type FieldDef,
   type GeneratorContext,
   type ModelDef,
-  type OmniPrismIR,
+  type PolyPrismIR,
   parseAnnotations,
-} from "@omniprism/core";
+} from "@polyprism/core";
 import { describe, expect, it } from "vitest";
 
 import { emitModels } from "../src/emit-models.js";
@@ -78,7 +78,7 @@ function enumDef(name: string, values: string[]): EnumDef {
 
 // Realistic fixture: one model with relations, an enum, a nullable scalar,
 // a list, a JSDoc comment, a Decimal native type, and an @json field.
-function buildFixtureIR(): OmniPrismIR {
+function buildFixtureIR(): PolyPrismIR {
   return {
     models: [
       model("User", [
@@ -145,7 +145,7 @@ function buildFixtureIR(): OmniPrismIR {
   };
 }
 
-async function emitAll(ir: OmniPrismIR) {
+async function emitAll(ir: PolyPrismIR) {
   const interfaceWriter = createInMemoryFileWriter();
   const typeWriter = createInMemoryFileWriter();
   const classWriter = createInMemoryFileWriter();

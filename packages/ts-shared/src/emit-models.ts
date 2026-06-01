@@ -4,8 +4,8 @@
 // declaration style), writes one file per visible model, and triggers
 // core's shared enum + JSON-types emission.
 
-import type { GeneratorContext } from "@omniprism/core";
-import { emitEnums, emitJsonTypes, resolveTypeFilename, resolveTypeIdent } from "@omniprism/core";
+import type { GeneratorContext } from "@polyprism/core";
+import { emitEnums, emitJsonTypes, resolveTypeFilename, resolveTypeIdent } from "@polyprism/core";
 
 import { renderIndex } from "./render-index.js";
 import { type DeclarationStyle, renderModel } from "./render-model.js";

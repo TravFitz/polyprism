@@ -5,7 +5,7 @@
 // `@db.Decimal(19, 2)` precision note we attach to fields with a Prisma
 // native type) into a single /** ... */ block.
 
-import type { AnnotationSet } from "@omniprism/core";
+import type { AnnotationSet } from "@polyprism/core";
 
 export interface JsDocOptions {
   /** Number of leading spaces on each emitted line (0 for model-level, 2 for field-level). */

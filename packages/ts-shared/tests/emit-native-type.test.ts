@@ -13,7 +13,7 @@ import {
   type GeneratorContext,
   type ModelDef,
   type NativeType,
-} from "@omniprism/core";
+} from "@polyprism/core";
 import { describe, expect, it } from "vitest";
 
 import { emitModels } from "../src/emit-models.js";

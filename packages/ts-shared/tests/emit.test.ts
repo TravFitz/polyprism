@@ -10,9 +10,9 @@ import {
   type GeneratorContext,
   type ModelDef,
   type NamingConfig,
-  type OmniPrismIR,
+  type PolyPrismIR,
   parseAnnotations,
-} from "@omniprism/core";
+} from "@polyprism/core";
 import { describe, expect, it } from "vitest";
 
 import { emitModels } from "../src/emit-models.js";
@@ -97,7 +97,7 @@ function makeEnum(name: string, values: readonly string[], doc: string | null = 
   };
 }
 
-function makeContext(ir: OmniPrismIR, naming: NamingConfig = DEFAULT_NAMING) {
+function makeContext(ir: PolyPrismIR, naming: NamingConfig = DEFAULT_NAMING) {
   const writer = createInMemoryFileWriter();
   const ctx: GeneratorContext = {
     ir,

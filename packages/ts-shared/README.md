@@ -1,13 +1,13 @@
-# @omniprism/ts-shared
+# @polyprism/ts-shared
 
 Internal package — TypeScript-specific rendering shared by every `ts-*`
-pattern in OmniPrism (`ts-interface`, `ts-type`, `ts-class`).
+pattern in PolyPrism (`ts-interface`, `ts-type`, `ts-class`).
 
 You probably don't want to install this directly. Pick a pattern package:
 
-- [`@omniprism/ts-interface`](../ts-interface) — `export interface User { ... }`
-- [`@omniprism/ts-type`](../ts-type) — `export type User = { ... };`
-- [`@omniprism/ts-class`](../ts-class) — `export class User { ... }`
+- [`@polyprism/ts-interface`](../ts-interface) — `export interface User { ... }`
+- [`@polyprism/ts-type`](../ts-type) — `export type User = { ... };`
+- [`@polyprism/ts-class`](../ts-class) — `export class User { ... }`
 
 See the [root README](../../README.md) for the project overview.
 

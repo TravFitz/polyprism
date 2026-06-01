@@ -14,10 +14,10 @@ import type {
   FieldDef,
   ModelDef,
   NamingConfig,
-  OmniPrismConfig,
-  OmniPrismIR,
-} from "@omniprism/core";
-import { resolveFieldIdent, resolveTypeFilename, resolveTypeIdent } from "@omniprism/core";
+  PolyPrismConfig,
+  PolyPrismIR,
+} from "@polyprism/core";
+import { resolveFieldIdent, resolveTypeFilename, resolveTypeIdent } from "@polyprism/core";
 
 import { ImportCollector } from "./imports.js";
 import { renderJsDoc } from "./jsdoc.js";
@@ -27,8 +27,8 @@ export type DeclarationStyle = "interface" | "type" | "class";
 
 export interface RenderModelOptions {
   readonly model: ModelDef;
-  readonly ir: OmniPrismIR;
-  readonly config: OmniPrismConfig;
+  readonly ir: PolyPrismIR;
+  readonly config: PolyPrismConfig;
   readonly declarationStyle: DeclarationStyle;
 }
 

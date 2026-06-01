@@ -1,15 +1,15 @@
 {
-  "name": "omniprism-example-complex-ecommerce",
+  "name": "polyprism-example-complex-ecommerce",
   "version": "0.0.0",
   "private": true,
-  "description": "Complex example: e-commerce schema exercising every OmniPrism feature — all scalar types, all 4 @json forms, @hide, @deprecated, @name override, self-references, composite indexes.",
+  "description": "Complex example: e-commerce schema exercising every PolyPrism feature — all scalar types, all 4 @json forms, @hide, @deprecated, @name override, self-references, composite indexes.",
   "type": "module",
   "scripts": {
     "generate": "prisma generate",
     "clean": "rm -rf generated"
   },
   "dependencies": {
-    "@omniprism/ts-interface": "workspace:*"
+    "@polyprism/ts-interface": "workspace:*"
   },
   "devDependencies": {
     "prisma": "^6.19.3"

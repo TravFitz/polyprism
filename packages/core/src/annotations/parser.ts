@@ -1,4 +1,4 @@
-// Annotation parser for OmniPrism doc-comment annotations.
+// Annotation parser for PolyPrism doc-comment annotations.
 //
 // Grammar (v0.1):
 //   line       = '@' ident                          // @hide
