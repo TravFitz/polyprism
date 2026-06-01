@@ -66,6 +66,14 @@ jobs:
           title: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Two different env var names because two different consumers read
+          # them. setup-node@v4's registry-url writes `~/.npmrc` with a
+          # `${NODE_AUTH_TOKEN}` placeholder — that's what `npm publish` reads
+          # at PUT time. `changesets/action` and its internal tooling key off
+          # `NPM_TOKEN`. Setting only one causes the publish to run
+          # anonymously and 404 (npm masks anonymous PUTs as 404 to avoid
+          # leaking scope existence). Set both, point at the same secret.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           # Provenance is only published when id-token: write is granted
           # AND --provenance is passed to npm publish. The publishConfig in
