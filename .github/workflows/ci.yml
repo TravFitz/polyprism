@@ -54,6 +54,14 @@ jobs:
   # majors — DMMF is officially unstable and is exactly the thing OmniPrism
   # has to be robust against. Each matrix cell regenerates every example
   # schema with `prisma generate`, then typechecks the output.
+  #
+  # Schema layout: the example fixtures use the Prisma 7 layout (no `url`
+  # in `datasource db { ... }`; URL lives in `prisma.config.ts`). The
+  # Prisma 6 matrix cell mutates the schemas at run time to inject `url`
+  # back — Prisma 6 hard-requires it in the schema and doesn't read
+  # `prisma.config.ts` for the datasource. Both schema variants produce
+  # identical DMMF for the model graph, so this is purely a config-shape
+  # adapter; the actual generator code is exercised identically.
   examples:
     name: Generate examples (Prisma ${{ matrix.prisma }})
     runs-on: ubuntu-latest
@@ -77,6 +85,13 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
+        # pnpm 9 won't create bin symlinks for workspace packages whose bin
+        # target (e.g. `./dist/generator.js`) doesn't exist yet at install
+        # time. It logs a `WARN Failed to create bin at ...` and continues
+        # without the symlink — which then makes `prisma generate` fail with
+        # `/bin/sh: omniprism-ts-X: not found` even after we build below.
+        # The fix is a second install after build (further down) to re-link
+        # the bins now that their targets exist.
         run: pnpm install --frozen-lockfile
 
       - name: Pin Prisma to ^${{ matrix.prisma }}.0.0 across the workspace
@@ -84,6 +99,38 @@ jobs:
 
       - name: Build OmniPrism packages
         run: pnpm build
+
+      - name: Re-link workspace bins now that dist/ exists
+        # See the install step above for the why. With dist/ files present,
+        # this install pass creates the bin symlinks pnpm warned about and
+        # otherwise skipped on the first install.
+        run: pnpm install --frozen-lockfile
+
+      - name: Adapt example schemas for Prisma 6
+        # Fixtures are canonically the Prisma 7 layout — no `url` in the
+        # schema's datasource block. Prisma 6 hard-rejects that shape, so
+        # for this cell we inject `url = env("DATABASE_URL")` back right
+        # after `provider = "postgresql"` in every example. Prisma 6 reads
+        # url from the schema and ignores prisma.config.ts's datasource.url
+        # (it still loads the file — just doesn't use the URL from it).
+        #
+        # Each schema is grep-validated first so that if anyone ever runs
+        # `prisma format` or otherwise reformats the line, the sed silent-
+        # miss doesn't get re-discovered as `Argument "url" is missing`
+        # five minutes into CI. Fail loudly instead.
+        if: matrix.prisma == '6'
+        run: |
+          set -euo pipefail
+          for schema in examples/*/prisma/schema.prisma; do
+            if ! grep -q '^  provider = "postgresql"$' "$schema"; then
+              echo "::error file=$schema::schema-adapter regex no longer matches — the datasource line layout has changed, update the sed pattern in .github/workflows/ci.yml" >&2
+              exit 1
+            fi
+            sed -i 's|^  provider = "postgresql"$|&\n  url      = env("DATABASE_URL")|' "$schema"
+            echo "::group::Adapted $schema"
+            sed -n '/^datasource db/,/^}/p' "$schema"
+            echo "::endgroup::"
+          done
 
       - name: Regenerate every example schema
         run: pnpm -F "omniprism-example-*" generate

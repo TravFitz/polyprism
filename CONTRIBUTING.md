@@ -59,9 +59,22 @@ pnpm -F "omniprism-example-*" generate
 ```
 
 This invokes `prisma generate` against each example schema and writes the
-output to `examples/<name>/generated/`. The CI matrix job typechecks the
-generated output of `simple-blog` and `task-tracker` under both Prisma 6 and
-Prisma 7.
+output to `examples/<name>/generated/`. The CI matrix job regenerates the
+examples and typechecks the output of `simple-blog` and `task-tracker`
+under both Prisma 6 and Prisma 7.
+
+**Schema layout note:** the example fixtures use the Prisma 7 layout —
+`url` lives in a `prisma.config.ts` file at the example root, not inside
+`datasource db { ... }`. Prisma 6 hard-requires `url` in the schema and
+ignores `prisma.config.ts` for the datasource, so the Prisma 6 matrix
+cell mutates each schema in-CI to inject `url = env("DATABASE_URL")`
+back before generating. Both layouts produce identical DMMF for the model
+graph, so the generator code is exercised identically either way.
+
+The three `examples/*/prisma.config.ts` files are intentionally byte-
+identical copies (each example is self-contained so contributors can
+clone-and-run any one of them). If you change one of them, change all
+three to keep them in sync — there's no CI check that enforces this yet.
 
 ## Writing tests
 

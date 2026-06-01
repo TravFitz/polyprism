@@ -43,7 +43,8 @@ generator omniprismCodegen {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // URL lives in `prisma.config.ts` (Prisma 7 layout).
+  // Prisma 6 users add `url = env("DATABASE_URL")` here.
 }
 
 enum TaskStatus {

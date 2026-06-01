@@ -32,8 +32,10 @@ OmniPrism takes a different shape:
   string. Naming, JSON-type handling, enum emission, and annotation behaviour
   are shared across every pattern — so the interface version and the class
   version of your schema agree on field names, file layout, and types.
-- **ESM-native, Prisma 7-native.** Built against Prisma 7's ESM-only runtime
-  from day one, not retrofitted from a CJS codebase.
+- **ESM-native, Prisma 7-native.** Pure ESM from day one — not retrofitted
+  from a CJS codebase. Works with both Prisma 6 and Prisma 7; CI tests
+  both. Example fixtures use the modern Prisma 7 schema layout (`url` in
+  `prisma.config.ts`).
 - **Zero third-party runtime dependencies on published packages.** Each
   `@omniprism/*` pattern package depends only on `@omniprism/core`, which in
   turn has no third-party runtime deps. The generated code imports nothing
@@ -70,7 +72,8 @@ generator omniprismCodegen {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Prisma 6 also needs `url = env("DATABASE_URL")` here.
+  // Prisma 7 wants the URL in a separate `prisma.config.ts` (below).
 }
 
 enum Role {
@@ -84,6 +87,15 @@ model User {
   name  String
   role  Role   @default(MEMBER)
 }
+```
+
+```ts
+// prisma.config.ts (Prisma 7 — optional on Prisma 6)
+import { defineConfig } from "prisma/config";
+
+export default defineConfig({
+  datasource: { url: process.env.DATABASE_URL ?? "" },
+});
 ```
 
 ```bash
