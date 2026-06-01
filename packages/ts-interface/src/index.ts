@@ -7,5 +7,3 @@ import { emitModels } from "@omniprism/ts-shared";
 export async function emit(ctx: GeneratorContext): Promise<void> {
   await emitModels(ctx, { declarationStyle: "interface" });
 }
-
-export const VERSION = "0.0.0";

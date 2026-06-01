@@ -1,6 +1,6 @@
 {
   "name": "@omniprism/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Core IR, DMMF reader, annotation parser, and naming layer for OmniPrism Prisma generators.",
   "type": "module",
   "license": "MIT",

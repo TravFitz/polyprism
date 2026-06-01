@@ -1,6 +1,6 @@
 {
   "name": "@omniprism/ts-class",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "TypeScript class emitter for OmniPrism. Emits plain classes with public fields from your Prisma schema (prisma-class-generator replacement, ESM-native).",
   "type": "module",
   "license": "MIT",

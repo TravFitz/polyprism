@@ -9,5 +9,3 @@ export * from "./emitter/index.js";
 export * from "./generator/index.js";
 export * from "./ir/index.js";
 export * from "./naming/index.js";
-
-export const VERSION = "0.0.0";

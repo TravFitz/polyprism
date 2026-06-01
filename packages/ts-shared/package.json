@@ -1,6 +1,6 @@
 {
   "name": "@omniprism/ts-shared",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Shared TypeScript rendering primitives used by OmniPrism's TS pattern emitters (ts-interface, ts-type, ts-class).",
   "type": "module",
   "license": "MIT",
