@@ -4,9 +4,9 @@
 > config string.
 
 OmniPrism is a [Prisma](https://www.prisma.io) generator that emits
-TypeScript types from your `schema.prisma` in **the shape you actually want**:
-interface, type alias, plain class — and (post v0.1) domain class with
-getters/setters, Zod, Valibot, ArkType, TypeBox, and more.
+TypeScript types from your `schema.prisma` in whichever shape fits the layer
+you're writing: interface, type alias, or plain class today — domain class
+with getters/setters, Zod, Valibot, ArkType, and TypeBox on the roadmap.
 
 ```prisma
 generator omniprismCodegen {
@@ -45,14 +45,14 @@ if any of the above lines up with what you're after, give it a spin.
 ## Features (v0.1)
 
 - **3 output patterns** today, more to come: `ts-interface`, `ts-type`, `ts-class`.
-- **Always-on standalone enum files** — solves the manual-mirror trap where ESM consumers can't `Object.values(MyEnum)` against a CJS `@prisma/client` re-export.
+- **Always-on standalone enum files** — every Prisma enum is also written to its own importable file, so you can `Object.values(MyEnum)` directly without re-exporting from `@prisma/client` (whose CJS shape doesn't always play nicely with ESM consumers).
 - **7 doc-comment annotations**: `@hide`, `@deprecated`, `@json` (4 forms), `@type`, `@name`, `@normalise`, `@coerce`.
 - **`prisma-json-types-generator` shorthand compatibility**: accepts `/// [TypeName]` as an alias for `@json(TypeName)`.
 - **Three-axis naming config**: file, type, field — each pickable independently. Snake, kebab, Pascal, camel, preserve.
 - **Per-identifier `@name(NewName)` override** — escape hatch for the global naming rule.
 - **`@db.X(p, s)` precision** captured as JSDoc so the schema-level info isn't lost.
 - **Optional barrel** (`emitIndex = true`) with class-mode awareness (`export { User }` vs. `export type { User }` based on the pattern).
-- **Pretty-formatted inline JSON types** — multi-property objects break onto lines instead of becoming one-line monstrosities.
+- **Pretty-formatted inline JSON types** — multi-property objects emitted from `@json({ ... })` are broken onto multiple lines for readability instead of collapsed onto one.
 - **Zero third-party runtime dependencies** on any published `@omniprism/*` package.
 
 ## Quick start
@@ -216,7 +216,6 @@ global rule for that one identifier.
 
 | | OmniPrism | prisma-class-generator | zod-prisma-types | prismabox |
 |---|---|---|---|---|
-| Status | Active | Abandoned (Aug 2024) | Maintenance (Feb 2026) | On hold |
 | Multi-pattern from one config | ✅ | ❌ (classes only) | ❌ (Zod only) | ❌ (TypeBox only) |
 | Prisma 7 native (ESM-only) | ✅ | ❌ | ⚠️ | ⚠️ |
 | Standalone enum files | ✅ (always-on) | ❌ | ✅ | ✅ |
@@ -231,9 +230,12 @@ and a different complexity tier:
 - **[`examples/simple-blog/`](examples/simple-blog)** — minimal, zero
   annotations, uses `ts-type`. The "what does zero-config look like" tour.
 - **[`examples/task-tracker/`](examples/task-tracker)** — mid-weight Kanban
-  schema using `ts-class`. Showcases initializer expressions, mixed
-  type-vs-value imports for enum defaults, and the fix to the long-standing
-  prisma-class-generator integer-default-Date bug.
+  schema using `ts-class`. Showcases initializer expressions and the mixed
+  type-vs-value imports needed when enum values appear as defaults. (The
+  class emitter is also scalar-kind-aware about literal defaults — see
+  `formatLiteralDefault` in `packages/ts-shared/src/render-model.ts` — so
+  mismatched literals like an `Int` default on a `DateTime` field fall
+  through to `!` rather than producing an `Invalid Date`.)
 - **[`examples/complex-ecommerce/`](examples/complex-ecommerce)** — kitchen
   sink using `ts-interface`. Every scalar type, all 4 `@json` forms, `@hide`,
   `@deprecated`, `@name` override, self-referential relations, composite
@@ -246,7 +248,7 @@ and a different complexity tier:
 | **0.1** (now) | `ts-interface`, `ts-type`, `ts-class`, 7 annotations, three-axis naming, enum + JSON-type file emission |
 | 0.2 | Polish: error messages with schema line numbers, JSDoc emission from Prisma `///` comments on models, richer README |
 | 0.3 | `ts-domain-class` — private state + getters/setters + builder + `from()` + `toJSON()`. `@normalise` + `@coerce` become active here. |
-| 0.4 | `ts-zod` — landing during the Zod-from-Prisma maintenance vacuum |
+| 0.4 | `ts-zod` — Zod schema emission, sharing the same naming and annotation pipeline as the type-shape patterns |
 | 1.0 | Docs site, JSON-Schema-validated config, public stability commitment on the emitter API |
 | Later | `ts-valibot`, `ts-arktype`, `ts-typebox`, `ts-effect-schema`, `ts-standard-schema`, PHP emitter family |
 
