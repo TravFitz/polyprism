@@ -19,20 +19,28 @@ That's the whole API. Swap the provider, get a different shape.
 
 ## Why this exists
 
-Mid-2026, the Prisma codegen ecosystem has a leadership vacuum:
+Most existing Prisma codegen tools are single-target by design: one generator
+emits Zod, another emits classes, another emits TypeBox. If your project
+needs more than one shape of the same schema (say, interfaces for your API
+layer and classes for your domain layer), you end up with multiple generator
+blocks, duplicated config, and naming conventions that have to be kept in
+sync by hand.
 
-- [`prisma-class-generator`](https://github.com/kimjbstar/prisma-class-generator) — abandoned since Aug 2024.
-- [`zod-prisma-types`](https://github.com/chrishoermann/zod-prisma-types) (~85k DL/wk) and [`prisma-zod-generator`](https://github.com/omar-dulaimi/prisma-zod-generator) (~74k DL/wk) — both entered maintenance mode Feb–Mar 2026. ~160k weekly users with no actively-maintained Zod option.
-- [`prismabox`](https://github.com/m1212e/prismabox) — on hold.
-- Prisma 7 (Sep 2025) went ESM-only and broke many community generators.
+OmniPrism takes a different shape:
 
-Worse, **every successful generator picks one output target** (Zod, TypeBox,
-classes) and nails it. Multi-target tools that exist today need a separate
-generator block per output, with no shared config.
+- **One generator, many outputs.** Pick the pattern with a single `provider`
+  string. Naming, JSON-type handling, enum emission, and annotation behaviour
+  are shared across every pattern — so the interface version and the class
+  version of your schema agree on field names, file layout, and types.
+- **ESM-native, Prisma 7-native.** Built against Prisma 7's ESM-only runtime
+  from day one, not retrofitted from a CJS codebase.
+- **Zero third-party runtime dependencies on published packages.** Each
+  `@omniprism/*` pattern package depends only on `@omniprism/core`, which in
+  turn has no third-party runtime deps. The generated code imports nothing
+  from OmniPrism. Drop the generator and your output keeps compiling.
 
-OmniPrism is what we'd want if we were starting fresh in 2026: ESM-native,
-Prisma 7-native, multi-pattern from one config knob, with **zero third-party
-runtime dependencies** on the published packages.
+It's a generator I wanted for my own work and couldn't find off the shelf —
+if any of the above lines up with what you're after, give it a spin.
 
 ## Features (v0.1)
 

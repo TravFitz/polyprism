@@ -12,6 +12,18 @@ coverage/
 *.iml
 .vscode/
 
+# AI agent / pairing tooling — keep private project instructions out of the
+# public repo. Add the corresponding file to your team's onboarding doc if
+# you want others to benefit from the same setup.
+CLAUDE.md
+.claude/
+AGENTS.md
+.cursorrules
+.cursor/
+.aider*
+.continue/
+.windsurfrules
+
 .env
 .env.local
 .env.*.local
