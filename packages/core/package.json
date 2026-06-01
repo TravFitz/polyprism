@@ -1,0 +1,48 @@
+{
+  "name": "@omniprism/core",
+  "version": "0.0.0",
+  "description": "Core IR, DMMF reader, annotation parser, and naming layer for OmniPrism Prisma generators.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Travis Fitzgerald",
+  "homepage": "https://github.com/TravFitz/omniprism/tree/main/packages/core",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TravFitz/omniprism.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/TravFitz/omniprism/issues"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "prisma",
+    "prisma-generator",
+    "codegen",
+    "omniprism"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@prisma/generator-helper": "^7.0.0"
+  }
+}

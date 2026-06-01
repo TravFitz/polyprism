@@ -1,0 +1,53 @@
+{
+  "name": "@omniprism/ts-interface",
+  "version": "0.0.0",
+  "description": "TypeScript interface emitter for OmniPrism. Emits `export interface User { ... }` types from your Prisma schema.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Travis Fitzgerald",
+  "homepage": "https://github.com/TravFitz/omniprism/tree/main/packages/ts-interface",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TravFitz/omniprism.git",
+    "directory": "packages/ts-interface"
+  },
+  "bugs": {
+    "url": "https://github.com/TravFitz/omniprism/issues"
+  },
+  "bin": {
+    "omniprism-ts-interface": "./dist/generator.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "prisma",
+    "prisma-generator",
+    "typescript",
+    "interface",
+    "codegen",
+    "omniprism"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@omniprism/core": "workspace:*",
+    "@omniprism/ts-shared": "workspace:*"
+  }
+}

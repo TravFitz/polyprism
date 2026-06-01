@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same PR/branch — CI minutes are not free.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Lint, typecheck, tests, build. Single Node + Prisma version — the test
+  # suite builds IR by hand and never invokes prisma generate, so it is
+  # Prisma-version-agnostic. Running it twice in a matrix would just burn
+  # minutes without adding signal.
+  check:
+    name: Lint + typecheck + test + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint + format check
+        # `pnpm ci` is a reserved pnpm subcommand that errors with
+        # "not implemented yet" instead of running our root script.
+        # `pnpm run ci` forces script lookup.
+        run: pnpm run ci
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  # The point of this matrix is to catch DMMF divergences between Prisma
+  # majors — DMMF is officially unstable and is exactly the thing OmniPrism
+  # has to be robust against. Each matrix cell regenerates every example
+  # schema with `prisma generate`, then typechecks the output.
+  examples:
+    name: Generate examples (Prisma ${{ matrix.prisma }})
+    runs-on: ubuntu-latest
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        prisma: ["6", "7"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Pin Prisma to ^${{ matrix.prisma }}.0.0 across the workspace
+        run: pnpm -r update "prisma@^${{ matrix.prisma }}.0.0"
+
+      - name: Build OmniPrism packages
+        run: pnpm build
+
+      - name: Regenerate every example schema
+        run: pnpm -F "omniprism-example-*" generate
+
+      - name: Typecheck the generated output
+        # Each self-contained example's generated/ directory must compile
+        # under strict TS with the same compiler options consumers will use.
+        # complex-ecommerce is excluded because it deliberately exercises
+        # the bare and with-path `@json` forms — those reference types the
+        # CONSUMER provides (`@json(SeoMeta)`, `@json(X from "./types/...")`),
+        # so its generated output is intentionally not self-resolving.
+        run: |
+          set -e
+          for example in examples/simple-blog/generated examples/task-tracker/generated; do
+            echo "::group::Typecheck $example"
+            find "$example" -name "*.ts" -type f -print0 \
+              | xargs -0 ./node_modules/.bin/tsc \
+                --target ES2022 \
+                --module ESNext \
+                --moduleResolution Bundler \
+                --strict \
+                --noEmit
+            echo "::endgroup::"
+          done

@@ -1,0 +1,17 @@
+{
+  "name": "omniprism-example-task-tracker",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Mid-weight example showcasing the ts-class pattern — class fields with real initializer expressions, definite-assignment for cuid()/now() defaults, enum-value defaults with mixed type/value imports.",
+  "type": "module",
+  "scripts": {
+    "generate": "prisma generate",
+    "clean": "rm -rf generated"
+  },
+  "dependencies": {
+    "@omniprism/ts-class": "workspace:*"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.3"
+  }
+}

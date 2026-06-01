@@ -1,0 +1,54 @@
+{
+  "name": "@omniprism/ts-class",
+  "version": "0.0.0",
+  "description": "TypeScript class emitter for OmniPrism. Emits plain classes with public fields from your Prisma schema (prisma-class-generator replacement, ESM-native).",
+  "type": "module",
+  "license": "MIT",
+  "author": "Travis Fitzgerald",
+  "homepage": "https://github.com/TravFitz/omniprism/tree/main/packages/ts-class",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TravFitz/omniprism.git",
+    "directory": "packages/ts-class"
+  },
+  "bugs": {
+    "url": "https://github.com/TravFitz/omniprism/issues"
+  },
+  "bin": {
+    "omniprism-ts-class": "./dist/generator.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "prisma",
+    "prisma-generator",
+    "typescript",
+    "class",
+    "codegen",
+    "omniprism",
+    "prisma-class-generator"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@omniprism/core": "workspace:*",
+    "@omniprism/ts-shared": "workspace:*"
+  }
+}

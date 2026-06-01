@@ -1,0 +1,228 @@
+// Complex e-commerce example.
+// Designed to exercise every OmniPrism feature in one schema:
+//   - All scalar types (String, Int, BigInt, Float, Decimal, DateTime, Json, Boolean)
+//   - All 4 @json annotation forms (bare, with-path, inline-anonymous, inline-named)
+//   - @hide, @deprecated (on fields, models, enum values)
+//   - @name to rename a lowercase enum
+//   - @type override
+//   - Self-referential relation (Product variants)
+//   - Multiple relations between the same two models (Customer ↔ Address, Customer ↔ Order)
+//   - @db.* native types (Decimal precision)
+//   - Composite uniques + indexes
+
+generator omniprismCodegen {
+  provider     = "omniprism-ts-interface"
+  output       = "../generated"
+  fileNaming   = "PascalCase"
+  typeNaming   = "PascalCase"
+  fieldNaming  = "preserve"
+  emitIndex    = "true"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Enums
+// ───────────────────────────────────────────────────────────────────────────
+
+// Lowercase enum identifier (legal in Prisma, ugly as a TS identifier).
+// @name renames it on output to OrderStatus, no consumer changes needed.
+/// @name(OrderStatus)
+enum status {
+  PENDING
+  PAID
+  /// @deprecated("collapsed into REFUNDED in 2026-04")
+  PARTIALLY_REFUNDED
+  REFUNDED
+  FAILED
+}
+
+enum Currency {
+  USD
+  EUR
+  GBP
+  AUD
+  CAD
+  JPY
+}
+
+enum ProductCategory {
+  ELECTRONICS
+  CLOTHING
+  HOME_AND_GARDEN
+  BOOKS
+  FOOD_AND_DRINK
+  TOYS
+}
+
+// Hidden enum value scenario — these still exist in the DB but we don't
+// want new code referencing them.
+enum FulfilmentMethod {
+  STANDARD
+  EXPRESS
+  /// @hide
+  LEGACY_COURIER
+  PICKUP
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Models
+// ───────────────────────────────────────────────────────────────────────────
+
+/// Top-level customer of the store.
+model Customer {
+  id            String    @id @default(cuid())
+  /// @normalise(trim, lowercase)
+  email         String    @unique
+  /// @normalise(trim)
+  phoneNumber   String?
+  dateOfBirth   DateTime?
+
+  /// Internal flag — should never leave the database row.
+  /// @hide
+  internalToken String
+
+  addresses     Address[]
+  orders        Order[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Address {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+
+  streetLine1 String
+  streetLine2 String?
+  city        String
+  state       String?
+  postalCode  String
+  countryCode String   @db.VarChar(2)
+  isPrimary   Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([customerId, streetLine1, postalCode])
+}
+
+/// Customer orders, the heart of the system.
+/// Some legacy fields are kept for migration compatibility.
+model Order {
+  // BigInt ID for high-volume tables
+  id              BigInt      @id @default(autoincrement())
+  customerId      String
+  customer        Customer    @relation(fields: [customerId], references: [id])
+  items           OrderItem[]
+
+  totalAmount     Decimal     @db.Decimal(15, 2)
+  taxAmount       Decimal     @db.Decimal(15, 2)
+  shippingAmount  Decimal     @db.Decimal(15, 2)
+  currency        Currency
+
+  status          status      @default(PENDING)
+  fulfilment      FulfilmentMethod @default(STANDARD)
+
+  // Form 3: inline anonymous → auto-generates OrderMetadata in json-types/
+  /// @json({ source: string, campaign: string, attribution: { utm_source: string, utm_medium: string, utm_campaign?: string } })
+  metadata        Json?
+
+  // Field marked deprecated — still emitted with JSDoc, downstream code
+  // continues to compile but IDEs warn about usage.
+  /// @deprecated("use orderReference instead; legacyOrderCode will be removed in 2026-12")
+  legacyOrderCode String?
+  orderReference  String      @unique
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([customerId, createdAt])
+  @@index([status, createdAt])
+}
+
+model OrderItem {
+  id        BigInt  @id @default(autoincrement())
+  orderId   BigInt
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity  Int
+  unitPrice Decimal @db.Decimal(15, 2)
+
+  // Form 4: inline named → generates LineItemSnapshot in json-types/
+  /// @json(LineItemSnapshot = { name: string, sku: string, attributes: Record<string, string | number | boolean> })
+  snapshot  Json
+}
+
+model Product {
+  id            String     @id @default(cuid())
+  sku           String     @unique
+  name          String
+  description   String?
+  price         Decimal    @db.Decimal(15, 2)
+  stockQuantity Int        @default(0)
+
+  // Form 2: with-path → emits `import type { ProductAttributes } from "./types/product-attributes"`
+  /// @json(ProductAttributes from "./types/product-attributes")
+  attributes    Json
+
+  // Form 1: bare → references existing type by name, no import emitted
+  /// @json(SeoMeta)
+  seoMeta       Json?
+
+  // @type override (not on a Json field — overrides the inferred type for any field)
+  /// @type(BrandedSku from "./types/brand")
+  internalSku   String?
+
+  category      ProductCategory
+
+  // Self-referential relation for product variants
+  parentId      String?
+  parent        Product?    @relation("ProductVariants", fields: [parentId], references: [id])
+  variants      Product[]   @relation("ProductVariants")
+
+  orderItems    OrderItem[]
+
+  /// @deprecated
+  oldSkuCode    String?
+
+  createdAt     DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+/// Audit log of sensitive actions. PII fields are hidden from the generated
+/// types but stored in the database for compliance.
+model AuditLog {
+  id        BigInt   @id @default(autoincrement())
+  action    String
+
+  // Form 4: inline named with a more complex shape including unknown types
+  /// @json(AuditPayload = { actor: string, kind: string, ts: number, target: { kind: string, id: string }, before: unknown, after: unknown })
+  payload   Json
+
+  /// @hide
+  rawIp     String
+
+  /// @hide
+  userAgent String?
+
+  timestamp DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([action])
+}
+
+// Model with @deprecated header — still emitted, but JSDoc warns at usage.
+/// @deprecated("migrated to new analytics pipeline 2026-03; will be removed")
+model LegacyAnalyticsSnapshot {
+  id          BigInt   @id @default(autoincrement())
+  capturedAt  DateTime
+  metricKey   String
+  metricValue Float
+  dimensions  Json?
+}

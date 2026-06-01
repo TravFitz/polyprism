@@ -1,0 +1,17 @@
+{
+  "name": "omniprism-example-simple-blog",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Minimal example: a basic blog schema (User, Post, Comment + one enum) showing OmniPrism's defaults.",
+  "type": "module",
+  "scripts": {
+    "generate": "prisma generate",
+    "clean": "rm -rf generated"
+  },
+  "dependencies": {
+    "@omniprism/ts-type": "workspace:*"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.3"
+  }
+}

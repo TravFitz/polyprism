@@ -1,0 +1,48 @@
+{
+  "name": "@omniprism/ts-shared",
+  "version": "0.0.0",
+  "description": "Shared TypeScript rendering primitives used by OmniPrism's TS pattern emitters (ts-interface, ts-type, ts-class).",
+  "type": "module",
+  "license": "MIT",
+  "author": "Travis Fitzgerald",
+  "homepage": "https://github.com/TravFitz/omniprism/tree/main/packages/ts-shared",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TravFitz/omniprism.git",
+    "directory": "packages/ts-shared"
+  },
+  "bugs": {
+    "url": "https://github.com/TravFitz/omniprism/issues"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "prisma",
+    "prisma-generator",
+    "typescript",
+    "codegen",
+    "omniprism"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@omniprism/core": "workspace:*"
+  }
+}

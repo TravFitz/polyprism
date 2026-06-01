@@ -1,0 +1,45 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits"],
+  "schedule": ["before 6am on Monday"],
+  "timezone": "Australia/Sydney",
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "description": "Group all devDep patch + minor bumps into one PR per week",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "devDependencies",
+      "automerge": true,
+      "automergeType": "branch"
+    },
+    {
+      "description": "Group all peerDep updates — these are user-facing so do not auto-merge",
+      "matchDepTypes": ["peerDependencies"],
+      "groupName": "peerDependencies",
+      "automerge": false
+    },
+    {
+      "description": "Prisma major upgrades are load-bearing — never auto-merge",
+      "matchPackageNames": ["prisma", "@prisma/client", "@prisma/generator-helper"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "prisma-major"]
+    },
+    {
+      "description": "Pin GitHub Actions to commit SHAs (security best practice)",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true
+    }
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on the first day of the month"],
+    "automerge": true
+  },
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "automerge": false
+  }
+}

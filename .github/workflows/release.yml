@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# Only one release run at a time — concurrent publishes would race on the
+# changesets-versioning PR.
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    # changesets/action opens a "Version Packages" PR and pushes to it on
+    # subsequent runs, so we need write to contents + pull-requests.
+    # id-token: write enables npm provenance.
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # changesets needs full history to compute the changelog.
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Belt-and-braces: main *should* always be green via CI on push, but
+      # publishing a broken package is much worse than burning two minutes
+      # to confirm it isn't.
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Create release PR or publish to npm
+        uses: changesets/action@v1
+        with:
+          # When there are unmerged changesets in `.changeset/`, this opens
+          # (or updates) the "Version Packages" PR. When that PR has been
+          # merged and there are no remaining changesets, it runs `publish`.
+          version: pnpm version-packages
+          publish: pnpm release
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Provenance is only published when id-token: write is granted
+          # AND --provenance is passed to npm publish. The publishConfig in
+          # each package.json doesn't pass it, so we set it here via env.
+          NPM_CONFIG_PROVENANCE: "true"

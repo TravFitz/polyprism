@@ -1,0 +1,53 @@
+{
+  "name": "@omniprism/ts-type",
+  "version": "0.0.0",
+  "description": "TypeScript type alias emitter for OmniPrism. Emits `export type User = { ... }` types from your Prisma schema.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Travis Fitzgerald",
+  "homepage": "https://github.com/TravFitz/omniprism/tree/main/packages/ts-type",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TravFitz/omniprism.git",
+    "directory": "packages/ts-type"
+  },
+  "bugs": {
+    "url": "https://github.com/TravFitz/omniprism/issues"
+  },
+  "bin": {
+    "omniprism-ts-type": "./dist/generator.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "prisma",
+    "prisma-generator",
+    "typescript",
+    "type-alias",
+    "codegen",
+    "omniprism"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@omniprism/core": "workspace:*",
+    "@omniprism/ts-shared": "workspace:*"
+  }
+}
