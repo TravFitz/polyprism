@@ -164,6 +164,47 @@ describe("parseAnnotations", () => {
       });
     });
 
+    it("DWIMs @json([X]) to @json(X[]) and surfaces a warning (tuple-of-one is almost never intended)", () => {
+      // The user-facing line-level shorthand `/// [TypeName]` doesn't connote
+      // arrays, but seeing it in the docs primes readers to expect `[X]`
+      // inside `@json(...)` to mean "array of X". Without this DWIM, the
+      // emitter passes `[X]` through to TS verbatim — which TS reads as a
+      // single-element tuple type, breaking any consumer that pushes more
+      // than one element. This is a real bug surfaced by the shopify-duty-tax
+      // dogfood (2026-06-02).
+      const result = parseAnnotations("@json([CountryConfiguration])");
+      expect(result.json).toEqual({
+        kind: "inline-anonymous",
+        typeExpression: "CountryConfiguration[]",
+      });
+      expect(result.parseIssues).toHaveLength(1);
+      expect(result.parseIssues[0]?.severity).toBe("warning");
+      expect(result.parseIssues[0]?.message).toMatch(
+        /tuple-of-one.*Treating as @json\(CountryConfiguration\[\]\)/,
+      );
+    });
+
+    it("preserves the literal tuple-of-one escape hatch via @json([X, ]) (trailing comma)", () => {
+      // For the rare case where someone genuinely wants a single-element
+      // tuple from a Json column, the trailing-comma form sidesteps the DWIM
+      // regex and lands in Form 3 inline-anonymous with the verbatim type.
+      const result = parseAnnotations("@json([CountryConfiguration, ])");
+      expect(result.json).toEqual({
+        kind: "inline-anonymous",
+        typeExpression: "[CountryConfiguration, ]",
+      });
+      expect(result.parseIssues).toHaveLength(0);
+    });
+
+    it("does NOT DWIM @json([A, B]) (multi-element tuples pass through unchanged)", () => {
+      const result = parseAnnotations("@json([A, B])");
+      expect(result.json).toEqual({
+        kind: "inline-anonymous",
+        typeExpression: "[A, B]",
+      });
+      expect(result.parseIssues).toHaveLength(0);
+    });
+
     it("[TypeName] shorthand (prisma-json-types-generator compat)", () => {
       const result = parseAnnotations("[LegacyMetadata]");
       expect(result.json).toEqual({ kind: "bare", typeName: "LegacyMetadata" });

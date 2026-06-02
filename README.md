@@ -209,6 +209,12 @@ auditMeta Json
 // as an alias for Form 1.
 /// [LegacyMetadata]
 legacy Json
+
+// Arrays: use TS array syntax inside the parens. `@json([Tag])` looks tempting
+// but is a single-element tuple in TS — PolyPrism DWIM-rewrites it to `Tag[]`
+// with a warning. Prefer the explicit form:
+/// @json(Tag[])
+tags Json @default("[]")
 ```
 
 ## Naming config

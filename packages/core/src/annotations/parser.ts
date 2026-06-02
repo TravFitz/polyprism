@@ -158,7 +158,7 @@ function applyAnnotation(
       set.deprecated = { reason: args ? extractStringArg(args) : null };
       return;
     case "json":
-      set.json = parseJsonArgs(args);
+      set.json = parseJsonArgs(args, parseIssues);
       return;
     case "type":
       set.type = parseTypeArgs(args);
@@ -195,10 +195,34 @@ function applyAnnotation(
   }
 }
 
-function parseJsonArgs(args: string | null): JsonAnnotation | null {
+function parseJsonArgs(
+  args: string | null,
+  parseIssues: { severity: "error" | "warning"; message: string }[],
+): JsonAnnotation | null {
   if (!args) return null;
   const trimmed = args.trim();
   if (trimmed.length === 0) return null;
+
+  // Bracket-shorthand misuse: `@json([Foo])` looks like the user meant "array
+  // of Foo", but TS reads `[Foo]` as a single-element tuple. The user-facing
+  // bracket shorthand (`/// [TypeName]` at line level) doesn't connote arrays
+  // either — it's just a brevity form for naming a Json type. We DWIM-rewrite
+  // `@json([X])` to `@json(X[])` because that's the user's almost-certain
+  // intent, and emit a warning so the surprise is visible.
+  //
+  // Escape hatch for the rare "I genuinely want a tuple-of-one" case: write
+  // `@json([X, ])` with a trailing comma — this regex won't match.
+  const bracketShorthandAbuse = /^\[\s*(\w+)\s*\]$/.exec(trimmed);
+  if (bracketShorthandAbuse) {
+    const inner = bracketShorthandAbuse[1]!;
+    parseIssues.push({
+      severity: "warning",
+      message:
+        `@json([${inner}]) emits a tuple-of-one type in TypeScript, almost never the intent. ` +
+        `Treating as @json(${inner}[]) (array of ${inner}). For the literal tuple-of-one, use @json([${inner}, ]) with a trailing comma.`,
+    });
+    return { kind: "inline-anonymous", typeExpression: `${inner}[]` };
+  }
 
   // Form 2: with-path — `TypeName from "./path"`
   // Check first so the assignment scan below doesn't get confused by paths
