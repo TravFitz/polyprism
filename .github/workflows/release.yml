@@ -48,11 +48,18 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Test
-        run: pnpm test
-
+      # Build before Test — mirrors the ordering fix in ci.yml. The runtime
+      # package's CJS-load test (`packages/runtime/tests/cjs-load.test.ts`)
+      # asserts `dist/index.cjs` exists so a regression where the dual
+      # ESM+CJS build silently drops the CJS sibling gets caught loud. On a
+      # fresh CI checkout (release runners are always fresh) dist doesn't
+      # exist yet — running Test first hard-fails that assertion regardless
+      # of code state and blocks the publish.
       - name: Build all packages
         run: pnpm build
+
+      - name: Test
+        run: pnpm test
 
       - name: Create release PR or publish to npm
         uses: changesets/action@v1
