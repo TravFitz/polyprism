@@ -224,12 +224,22 @@ function parseJsonArgs(
     return { kind: "inline-anonymous", typeExpression: `${inner}[]` };
   }
 
-  // Form 2: with-path — `TypeName from "./path"`
+  // Form 2: with-path — `TypeName from "./path"` or `TypeName[] from "./path"`.
   // Check first so the assignment scan below doesn't get confused by paths
-  // containing characters that look operator-like.
-  const pathMatch = /^(\w+)\s+from\s+["'](.+)["']$/.exec(trimmed);
+  // containing characters that look operator-like. The optional `[]` suffix
+  // covers the canonical "Json column holds an array of an imported type"
+  // case — natural shape for any `Json @default("[]")` column. Without this,
+  // users have to either declare a wrapper alias (`type Xs = X[]`) or import
+  // X globally via prisma-json-types-style convention.
+  const pathMatch = /^(\w+)(\[\])?\s+from\s+["'](.+)["']$/.exec(trimmed);
   if (pathMatch) {
-    return { kind: "with-path", typeName: pathMatch[1]!, importPath: pathMatch[2]! };
+    const isArray = pathMatch[2] === "[]";
+    return {
+      kind: "with-path",
+      typeName: pathMatch[1]!,
+      importPath: pathMatch[3]!,
+      ...(isArray ? { isArray: true } : {}),
+    };
   }
 
   // Form 4: inline named — `Name = expression`

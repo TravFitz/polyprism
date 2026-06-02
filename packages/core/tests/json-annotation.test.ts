@@ -156,6 +156,54 @@ describe("@json — Form 2 (with import path)", () => {
       importPath: "../../types",
     });
   });
+
+  it("array combo — `@json(Foo[] from path)` imports Foo and types the field as Foo[]", () => {
+    // Natural shape for Json columns that hold a typed array — the dogfood
+    // case that triggered the 0.1.4 @json([X]) DWIM but couldn't be fully
+    // expressed back then because Form 2 didn't carry an array bit. With
+    // this, `countries Json @default("[]")` + `@json(Country[] from "...")`
+    // imports the singular `Country` and emits the field type as `Country[]`.
+    expect(parseJson('@json(Country[] from "./types/country")')).toEqual({
+      kind: "with-path",
+      typeName: "Country",
+      importPath: "./types/country",
+      isArray: true,
+    });
+  });
+
+  it("array combo — works with single quotes too", () => {
+    expect(parseJson("@json(Tag[] from './types/tag')")).toEqual({
+      kind: "with-path",
+      typeName: "Tag",
+      importPath: "./types/tag",
+      isArray: true,
+    });
+  });
+
+  it("array combo — works with deep relative paths and aliased imports", () => {
+    expect(
+      parseJson('@json(CountryConfig[] from "~/services/inclusive-pricing/CountryConfig")'),
+    ).toEqual({
+      kind: "with-path",
+      typeName: "CountryConfig",
+      importPath: "~/services/inclusive-pricing/CountryConfig",
+      isArray: true,
+    });
+  });
+
+  it("array suffix is omitted from the IR (not `isArray: false`) for the non-array form — matches Form 2 baseline", () => {
+    // Backward compat: the optional `isArray` field is absent (not explicit
+    // false) on the plain form. Test fixtures across the codebase rely on
+    // strict `toEqual` against `{ kind, typeName, importPath }` without an
+    // `isArray` key — that contract is preserved here.
+    const result = parseJson('@json(Foo from "./types/foo")');
+    expect(result).toEqual({
+      kind: "with-path",
+      typeName: "Foo",
+      importPath: "./types/foo",
+    });
+    expect(result).not.toHaveProperty("isArray");
+  });
 });
 
 // ────────────────────────────────────────────────────────────────────────────

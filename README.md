@@ -195,6 +195,10 @@ metadata Json
 /// @json(BillingAddress from "./types/billing")
 address Json
 
+// 2a. Array combo — imports the singular type, emits the field type as Type[].
+/// @json(Tag[] from "./types/tag")
+tags Json @default("[]")
+
 // 3. Inline anonymous — auto-generates `{Model}{Field}` (e.g. UserSettings).
 //    Emits to `json-types/UserSettings.ts`.
 /// @json({ theme: string, locale: string, notifications: { email: boolean } })

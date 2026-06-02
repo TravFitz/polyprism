@@ -45,7 +45,18 @@ export type CoerceTo = "date" | "int" | "float" | "decimal" | "string";
 
 export type JsonAnnotation =
   | { readonly kind: "bare"; readonly typeName: string }
-  | { readonly kind: "with-path"; readonly typeName: string; readonly importPath: string }
+  | {
+      readonly kind: "with-path";
+      readonly typeName: string;
+      readonly importPath: string;
+      /**
+       * `true` when the annotation was written as `@json(Type[] from "path")`
+       * — the imported identifier is `Type`, but the field's TypeScript type
+       * is `Type[]`. Defaults to `false` (omitted) for the plain
+       * `@json(Type from "path")` form.
+       */
+      readonly isArray?: boolean;
+    }
   | { readonly kind: "inline-anonymous"; readonly typeExpression: string }
   | {
       readonly kind: "inline-named";

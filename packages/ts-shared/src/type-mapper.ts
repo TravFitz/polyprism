@@ -65,7 +65,11 @@ function mapJsonAnnotation(opts: TypeMapperOptions): string {
       return json.typeName;
     case "with-path":
       opts.imports.add(json.importPath, json.typeName);
-      return json.typeName;
+      // For `@json(Type[] from "path")` we import `Type` (singular) and emit
+      // the field's TS type as `Type[]`. Importing `Type[]` would be a syntax
+      // error — the brackets are a type-expression suffix, not part of the
+      // identifier.
+      return json.isArray ? `${json.typeName}[]` : json.typeName;
     case "inline-anonymous": {
       const typeName = autoNameInlineJson(opts.modelSchemaName, opts.field.name);
       const filename = resolveTypeFilename(typeName, opts.naming.fileNaming);

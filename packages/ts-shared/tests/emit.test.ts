@@ -435,6 +435,28 @@ describe("emit — @json", () => {
     expect(content).toContain("meta: UserMetadata;");
   });
 
+  it("with-path array combo: imports singular type, emits field type as `Type[]`", async () => {
+    const { ctx, writer } = makeContext({
+      models: [
+        model("M", [
+          {
+            ...scalar("tags", "Json"),
+            annotations: parseAnnotations('@json(Tag[] from "./types/tag")'),
+          },
+        ]),
+      ],
+      enums: [],
+    });
+    await emit(ctx);
+    const content = writer.files.get("M.ts")!;
+    // Import is for the singular identifier — `import { Tag[] }` would be a syntax error.
+    expect(content).toContain('import type { Tag } from "./types/tag"');
+    // Field type uses the array form.
+    expect(content).toContain("tags: Tag[];");
+    // Sanity: we don't accidentally double-render the brackets in the import.
+    expect(content).not.toContain("Tag[] }");
+  });
+
   it("inline-anonymous form: generates json-types file and imports it", async () => {
     const { ctx, writer } = makeContext({
       models: [
