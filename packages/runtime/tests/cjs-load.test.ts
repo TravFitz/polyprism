@@ -12,7 +12,7 @@
 // package's "polyprism-source" export condition (mapping to src/*.ts),
 // which bypasses the publish-shape verification we actually want here.
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -47,5 +47,28 @@ describe("@polyprism/runtime — CJS load path", () => {
     if (!existsSync(cjsEntry)) return;
     const rt = cjsRequire(cjsEntry);
     expect(() => rt.coerceInt(1.5, "T.f")).toThrowError(/Cannot coerce 1.5 to int/);
+  });
+
+  it("dist/index.cjs is self-contained — no internal `require()` of ESM siblings", () => {
+    // Regression gate for the 0.1.6 ship bug: tsup with `bundle: false`
+    // preserved the source-level `from "./coerce.js"` literal in the CJS
+    // output as `require("./coerce.js")`. With the package's `"type":
+    // "module"`, those `.js` siblings are ESM-format. Node-as-CJS resolving
+    // the require chain then hit `Unexpected token 'export'` parsing the
+    // ESM file (ts-jest, Mocha, anything stricter than Node 22's
+    // experimental require-esm support).
+    //
+    // The `dist/index.cjs is loadable` test above CAN'T catch this on
+    // dev machines running Node 22 with `require(esm)` enabled — that
+    // feature silently allowed the ESM file to load through `require()`,
+    // masking the failure in CI and local smoke. This regex check runs
+    // against the bytes of the published artifact, independent of the
+    // host Node version. Bundling per-format means there are no internal
+    // requires at all; if any reappear, this test catches them before
+    // they hit consumers.
+    if (!existsSync(cjsEntry)) return;
+    const content = readFileSync(cjsEntry, "utf8");
+    const internalRequires = content.match(/require\(["']\.\.?\/[^"')]+["']\)/g) ?? [];
+    expect(internalRequires).toEqual([]);
   });
 });

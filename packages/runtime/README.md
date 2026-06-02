@@ -2,9 +2,9 @@
 
 Runtime helpers used by [`@polyprism/ts-domain-class`](https://www.npmjs.com/package/@polyprism/ts-domain-class) — PolyPrism's opinionated domain-class pattern. Part of [PolyPrism](https://github.com/TravFitz/polyprism).
 
-**Dual ESM + CJS, zero third-party runtime dependencies.** The one PolyPrism runtime dep — only required when you choose the domain-class pattern. Users of `ts-interface`, `ts-type`, and `ts-class` never see this package.
+**ESM-first, with a CJS sibling for legacy test runners. Zero third-party runtime dependencies.** The one PolyPrism runtime dep — only required when you choose the domain-class pattern. Users of `ts-interface`, `ts-type`, and `ts-class` never see this package.
 
-Ships both ESM (`import { coerceInt } from "@polyprism/runtime"`) and CJS (`const { coerceInt } = require("@polyprism/runtime")`) entry points so the package works under ts-jest, plain `node`, Mocha, Vitest, Bun, Deno, and modern bundlers without any per-project `transformIgnorePatterns` plumbing.
+ESM is the primary contract (`import { coerceInt } from "@polyprism/runtime"`). A CJS sibling ships alongside (`const { coerceInt } = require("@polyprism/runtime")`) so consumers still on ts-jest, Mocha-without-loader, or other CJS-flavoured test runners can `require()` it without `transformIgnorePatterns` plumbing. Vitest, Jest with `--experimental-vm-modules`, Bun, Deno, and modern bundlers all resolve to the ESM entry naturally.
 
 ## What it does
 

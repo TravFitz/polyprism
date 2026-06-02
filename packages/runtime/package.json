@@ -1,7 +1,7 @@
 {
   "name": "@polyprism/runtime",
   "version": "0.1.6",
-  "description": "Runtime helpers (normalise + coerce primitives) used by @polyprism/ts-domain-class. The one PolyPrism runtime dep — only required when you choose the opinionated domain-class pattern. Dual ESM + CJS, zero third-party runtime deps.",
+  "description": "Runtime helpers (normalise + coerce primitives) used by @polyprism/ts-domain-class. The one PolyPrism runtime dep — only required when you choose the opinionated domain-class pattern. ESM-first with a CJS sibling for legacy test runners, zero third-party runtime deps.",
   "type": "module",
   "license": "MIT",
   "author": "Travis Fitzgerald",
