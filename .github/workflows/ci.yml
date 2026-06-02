@@ -44,11 +44,23 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Test
-        run: pnpm test
-
+      # Build must run BEFORE Test. `@polyprism/runtime`'s CJS-load test
+      # (`packages/runtime/tests/cjs-load.test.ts`) asserts that `dist/index.cjs`
+      # exists so a regression where the dual ESM+CJS build silently drops the
+      # CJS sibling gets caught loud. On a fresh CI checkout dist/ doesn't
+      # exist yet — running Test before Build would hard-fail that assertion
+      # on every CI run regardless of code state. Reordering means the build
+      # artifacts are real by the time anything inspects them.
+      #
+      # (Historical footnote: this repo's first push shipped broken CI for
+      # the inverse reason — typecheck passed locally because prior build
+      # runs had populated dist/, but the clean-install CI run had no dist
+      # and failed. Same shape of bug, opposite direction.)
       - name: Build
         run: pnpm build
+
+      - name: Test
+        run: pnpm test
 
   # The point of this matrix is to catch DMMF divergences between Prisma
   # majors — DMMF is officially unstable and is exactly the thing PolyPrism

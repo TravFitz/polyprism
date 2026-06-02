@@ -1,7 +1,7 @@
 {
   "name": "@polyprism/runtime",
   "version": "0.1.5",
-  "description": "Runtime helpers (normalise + coerce primitives) used by @polyprism/ts-domain-class. The one PolyPrism runtime dep — only required when you choose the opinionated domain-class pattern. Pure ESM, zero third-party runtime deps.",
+  "description": "Runtime helpers (normalise + coerce primitives) used by @polyprism/ts-domain-class. The one PolyPrism runtime dep — only required when you choose the opinionated domain-class pattern. Dual ESM + CJS, zero third-party runtime deps.",
   "type": "module",
   "license": "MIT",
   "author": "Travis Fitzgerald",
@@ -14,7 +14,8 @@
   "bugs": {
     "url": "https://github.com/TravFitz/polyprism/issues"
   },
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
@@ -22,8 +23,14 @@
         "types": "./src/index.ts",
         "import": "./src/index.ts"
       },
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "files": [
@@ -40,7 +47,8 @@
     "runtime",
     "coerce",
     "normalise",
-    "esm"
+    "esm",
+    "cjs"
   ],
   "scripts": {
     "build": "tsup",

@@ -561,7 +561,13 @@ describe('declarationStyle: "domain-class" — prisma-assigned getter @remarks',
     expect(out).not.toContain("@remarks Prisma-assigned");
   });
 
-  it("does NOT emit the @remarks tag on nullable+prisma-assigned fields (those default to null in the private slot)", async () => {
+  it("DOES emit the @remarks tag on nullable+prisma-assigned fields (they share the pre-insert undefined contract with required+prisma-assigned)", async () => {
+    // Updated contract after the nullable+function-default null-clobber fix:
+    // nullable + `@default(now()/cuid()/etc)` fields now leave the private
+    // slot `!` (definite-assignment, pre-insert undefined) so Prisma's
+    // schema default fires instead of being explicit-null-clobbered. They
+    // therefore share the pre-insert undefined contract with required
+    // prisma-assigned fields and deserve the same JSDoc surfacing.
     const { ctx, writer } = makeContext([
       model("Order", [
         field("dateCreated", scalar("DateTime"), {
@@ -573,16 +579,22 @@ describe('declarationStyle: "domain-class" — prisma-assigned getter @remarks',
     ]);
     await emitModels(ctx, { declarationStyle: "domain-class" });
     const out = writer.files.get("Order.ts")!;
-    expect(out).not.toContain("@remarks Prisma-assigned");
+    expect(out).toMatch(/@remarks Prisma-assigned at insert time/);
   });
 });
 
 describe('declarationStyle: "domain-class" — nullable + default truth gap', () => {
-  it("initialises a nullable+function-default (`@default(now())`) private slot to null, not `!`", async () => {
-    // `dateCreated DateTime? @default(now())` — prisma-assigned, so the
-    // field is NOT in UserInit and NOT assigned in the constructor. The
-    // private slot must default to null so the runtime value matches the
-    // declared `Date | null` type instead of lying via `!`.
+  it("uses `!` (definite-assignment) for nullable+function-default — NOT `= null` — so Prisma's @default fires instead of being null-clobbered", async () => {
+    // `dateCreated DateTime? @default(now())` — prisma-assigned. The private
+    // slot must stay `undefined` pre-insert so Prisma's data: channel sees
+    // an absent field and fires the schema default. Initialising to null
+    // would cause Prisma to write NULL (explicit-null means "force null,
+    // ignore default" in Prisma's contract), silently defeating @default(now()).
+    //
+    // This test gates a real regression: an earlier "ALL nullable fields
+    // initialise to null" rule was set with the well-meaning goal of making
+    // the runtime value match the declared `T | null` type, but it caused
+    // production data loss for any model using nullable + function-default.
     const { ctx, writer } = makeContext([
       model("Order", [
         field("id", scalar("String"), { hasDefaultValue: true, default: cuidDefault() }),
@@ -595,8 +607,23 @@ describe('declarationStyle: "domain-class" — nullable + default truth gap', ()
     ]);
     await emitModels(ctx, { declarationStyle: "domain-class" });
     const out = writer.files.get("Order.ts")!;
-    expect(out).toContain("#dateCreated: Date | null = null;");
-    expect(out).not.toContain("#dateCreated!: Date | null");
+    expect(out).toContain("#dateCreated!: Date | null;");
+    expect(out).not.toContain("#dateCreated: Date | null = null;");
+    // The pre-insert undefined contract is surfaced via @remarks JSDoc so
+    // consumers know the declared type is post-insert-honest.
+    expect(out).toMatch(/@remarks Prisma-assigned at insert time/);
+  });
+
+  it("STILL initialises nullable+no-default to `= null` (user wants null when unset, no schema default to defeat)", async () => {
+    const { ctx, writer } = makeContext([
+      model("Order", [
+        field("id", scalar("String"), { hasDefaultValue: true, default: cuidDefault() }),
+        field("notes", scalar("String"), { isRequired: false }),
+      ]),
+    ]);
+    await emitModels(ctx, { declarationStyle: "domain-class" });
+    const out = writer.files.get("Order.ts")!;
+    expect(out).toContain("#notes: string | null = null;");
   });
 
   it("applies a nullable+literal-default value when init.field is undefined", async () => {

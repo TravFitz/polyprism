@@ -247,7 +247,7 @@ export function renderDomainClass(opts: RenderDomainClassOptions): RenderDomainC
       decision,
       normaliseOps,
       initFallback,
-      privateFieldInitializer: resolvePrivateFieldInitializer(field),
+      privateFieldInitializer: resolvePrivateFieldInitializer(field, initFallback),
     });
   }
 
@@ -482,20 +482,44 @@ function formatDefaultExpr(
   return null;
 }
 
-function resolvePrivateFieldInitializer(field: FieldDef): string | null {
+function resolvePrivateFieldInitializer(
+  field: FieldDef,
+  initFallback: FieldPlan["initFallback"],
+): string | null {
   if (field.isList) return "= []";
-  // ANY nullable field initialises its private slot to null so the runtime
-  // value matches the declared type. The previous "= null only when no
-  // default" rule lied for two cases:
-  //   1. nullable + prisma-assigned default (e.g. `DateTime? @default(now())`)
-  //      — the default is set by Prisma at insert, not by the constructor,
-  //      so without an explicit `= null` the private field stays undefined.
-  //   2. nullable + literal default (e.g. `String? @default("INCOMPLETE")`) —
-  //      see renderInitAssignment for how the literal default is applied; the
-  //      private-field initialiser still needs to be null so the slot is a
-  //      defined value before the init-assignment line runs.
-  if (!field.isRequired) return "= null";
-  return null; // `!` definite assignment
+
+  // Nullable fields divide three ways. We branch on `initFallback.kind`
+  // (the classification `resolveInitFallback` already computed for this
+  // field) rather than re-deriving from `field.default?.kind` so the slot
+  // initializer stays in lockstep with the constructor's init-assignment
+  // logic — one source of truth.
+  //
+  //   1. No default (`initFallback.kind === "none"`) → `= null`. The
+  //      declared type allows null, the consumer didn't ask for a default,
+  //      so null is the honest pre-insert runtime value. Prisma reads null,
+  //      writes null — consistent with the schema intent.
+  //
+  //   2. Literal default (`initFallback.kind === "default-expr"`, e.g.
+  //      `String? @default("INCOMPLETE")`) → `= null`. The constructor's
+  //      init-assignment line overrides this with the literal default when
+  //      `init.X === undefined`, so the post-construction runtime is the
+  //      default value (not null). Prisma reads the default, writes it.
+  //
+  //   3. Prisma-assigned (`initFallback.kind === "prisma-assigned"`, i.e.
+  //      `@default(now() | cuid() | uuid() | autoincrement() | dbgenerated(...))`)
+  //      → `!` definite-assignment, NO `= null`. Prisma fires the @default
+  //      at insert time, so the post-construction runtime is `undefined`.
+  //      If we initialised to `= null` here, the enumerable accessor would
+  //      expose null to Prisma's `data:` channel, which by contract means
+  //      "force null, ignore the schema default" and silently null-clobbers
+  //      the field. Leaving it `!` keeps the runtime undefined; Prisma's
+  //      `data:` channel skips it; the schema default fires. The `@remarks`
+  //      JSDoc surfaces the pre-insert undefined contract to consumers.
+  if (!field.isRequired) {
+    if (initFallback.kind === "prisma-assigned") return null;
+    return "= null";
+  }
+  return null; // required — `!` definite assignment
 }
 
 function isInitOptional(plan: FieldPlan): boolean {
@@ -636,17 +660,23 @@ function buildFieldExtraTags(
     const args = field.nativeType.args.join(", ");
     tags.push(args ? `@db.${field.nativeType.name}(${args})` : `@db.${field.nativeType.name}`);
   }
-  // For required + prisma-assigned fields (`@default(cuid())`,
-  // `@default(now())`, `@default(autoincrement())`, etc.), the declared
+  // For prisma-assigned fields (`@default(cuid())`, `@default(now())`,
+  // `@default(autoincrement())`, etc.), required OR nullable, the declared
   // getter type is honest only AFTER Prisma persists the row. On a
   // freshly-constructed instance the private slot is `undefined`, which
   // means a consumer doing `const o = new Order({...}); o.id.toString()`
   // hits "Cannot read properties of undefined" with no field context.
+  //
+  // For nullable prisma-assigned fields, `undefined` is also load-bearing
+  // for Prisma's `data:` channel — explicit null means "force null, ignore
+  // schema default", so we deliberately keep the slot undefined pre-insert
+  // (see resolvePrivateFieldInitializer for the matching emit decision).
+  //
   // Surface the contract via an `@remarks` JSDoc tag so IDE hovers + npm
   // doc tooling pick it up. We don't make the getter throw because the
   // graceful-undefined behaviour is load-bearing for toJSON() — see the
   // `=== undefined` guard for BigInt fields in renderToJSONMethod.
-  if (field.isRequired && !field.isList && initFallback.kind === "prisma-assigned") {
+  if (!field.isList && initFallback.kind === "prisma-assigned") {
     tags.push(
       "@remarks Prisma-assigned at insert time — reading on a freshly-constructed instance returns `undefined` until the row has been persisted (and `from()` has hydrated the value back, or Prisma has returned the populated row). The declared type is honest post-insert.",
     );
