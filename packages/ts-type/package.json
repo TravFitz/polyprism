@@ -1,6 +1,6 @@
 {
   "name": "@polyprism/ts-type",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Prisma 6 & 7 generator that emits TypeScript type aliases (`export type User = { ... }`) from your schema. Pure ESM, zero runtime deps, configurable naming + annotations. Part of PolyPrism.",
   "type": "module",
   "license": "MIT",
