@@ -1,6 +1,6 @@
 {
   "name": "@polyprism/ts-interface",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Prisma 6 & 7 generator that emits TypeScript interfaces (`export interface User { ... }`) from your schema. Pure ESM, zero runtime deps, configurable naming + annotations. Part of PolyPrism.",
   "type": "module",
   "license": "MIT",
