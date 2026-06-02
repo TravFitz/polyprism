@@ -68,7 +68,7 @@ If you don't have a strong preference, [`@polyprism/ts-interface`](https://www.n
 - **Prisma 6 & 7 compatibility** — same generator binary, both Prisma majors. CI tests against both, including the Prisma 7 `prisma.config.ts` layout.
 - **Pure ESM** from day one — not retrofitted from a CJS codebase. No `require()`, no `.cjs` re-export shims, no surprise.
 - **Zero third-party runtime dependencies.** This package depends only on `@polyprism/core` and `@polyprism/ts-shared`, neither of which has a third-party runtime dep.
-- **Seven `///` annotations** — `@hide`, `@deprecated`, `@json` (four forms), `@type`, `@name`, `@normalise`, `@coerce`. Plus `prisma-json-types-generator` shorthand compatibility (`/// [TypeName]`).
+- **Eight `///` annotations** — `@hide`, `@deprecated`, `@json` (four forms), `@type`, `@name`, `@normalise`, `@coerce`, `@noCoerce`. Plus `prisma-json-types-generator` shorthand compatibility (`/// [TypeName]`).
 - **Three-axis naming config** — independently control file, type, and field naming (`snake_case`, `kebab-case`, `PascalCase`, `camelCase`, or `preserve`).
 - **Per-identifier `@name(NewName)` override** — escape hatch for the global naming rule.
 - **`@db.X(p, s)` precision captured as JSDoc** so the schema-level info survives codegen.

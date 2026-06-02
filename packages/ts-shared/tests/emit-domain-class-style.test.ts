@@ -487,6 +487,96 @@ describe('declarationStyle: "domain-class" — Prisma-friendly accessor surface'
   });
 });
 
+describe('declarationStyle: "domain-class" — strict nullable setter has no null-wrap', () => {
+  it("emits a bare `this.#x = v;` for nullable strict relations (no `v === null ? null : v` cosmetic wrap)", async () => {
+    const { ctx, writer } = makeContext([
+      model("Order", [
+        field("id", scalar("String"), { hasDefaultValue: true, default: cuidDefault() }),
+        field("parentOrder", relation("Order"), { isRequired: false }),
+      ]),
+    ]);
+    await emitModels(ctx, { declarationStyle: "domain-class" });
+    const out = writer.files.get("Order.ts")!;
+    // The null-wrap is unnecessary cosmetic dead code when there's no coerce
+    // or normalise to skip on null input — the setter is a pure pass-through.
+    expect(out).toContain("this.#parentOrder = v;");
+    expect(out).not.toContain("this.#parentOrder = v === null ? null : v");
+  });
+
+  it("STILL wraps nullable coerce fields (the wrap stops coerceX from being called with null)", async () => {
+    const { ctx, writer } = makeContext([
+      model("Order", [field("paidAt", scalar("DateTime"), { isRequired: false })]),
+    ]);
+    await emitModels(ctx, { declarationStyle: "domain-class" });
+    const out = writer.files.get("Order.ts")!;
+    expect(out).toContain('this.#paidAt = v === null ? null : coerceDate(v, "Order.paidAt");');
+  });
+
+  it("STILL wraps nullable string fields with @normalise (so normalise call isn't fired on null)", async () => {
+    const { ctx, writer } = makeContext([
+      model("Customer", [
+        field("vatNumber", scalar("String"), {
+          isRequired: false,
+          annotations: { ...emptyAnnotationSet(null), normalise: ["trim"] },
+        }),
+      ]),
+    ]);
+    await emitModels(ctx, { declarationStyle: "domain-class" });
+    const out = writer.files.get("Customer.ts")!;
+    // normaliseNullable already handles null internally — but the outer guard
+    // still wraps because hasRuntimeWork is true (normaliseOps.length > 0).
+    expect(out).toContain("normaliseNullable");
+  });
+});
+
+describe('declarationStyle: "domain-class" — prisma-assigned getter @remarks', () => {
+  it("emits an @remarks JSDoc tag on required+prisma-assigned getters so IDE hovers surface the pre-insert contract", async () => {
+    const { ctx, writer } = makeContext([
+      model("Order", [
+        field("id", scalar("BigInt"), {
+          hasDefaultValue: true,
+          // autoincrement is a function default, treated as prisma-assigned
+          default: { kind: "function", name: "autoincrement", args: [] },
+        }),
+      ]),
+    ]);
+    await emitModels(ctx, { declarationStyle: "domain-class" });
+    const out = writer.files.get("Order.ts")!;
+    expect(out).toMatch(/@remarks Prisma-assigned at insert time/);
+    expect(out).toContain("freshly-constructed instance");
+    expect(out).toContain("undefined");
+  });
+
+  it("does NOT emit the @remarks tag on required+literal-default fields (constructor coalesces those)", async () => {
+    const { ctx, writer } = makeContext([
+      model("Order", [
+        field("status", scalar("String"), {
+          hasDefaultValue: true,
+          default: litStr("PENDING"),
+        }),
+      ]),
+    ]);
+    await emitModels(ctx, { declarationStyle: "domain-class" });
+    const out = writer.files.get("Order.ts")!;
+    expect(out).not.toContain("@remarks Prisma-assigned");
+  });
+
+  it("does NOT emit the @remarks tag on nullable+prisma-assigned fields (those default to null in the private slot)", async () => {
+    const { ctx, writer } = makeContext([
+      model("Order", [
+        field("dateCreated", scalar("DateTime"), {
+          isRequired: false,
+          hasDefaultValue: true,
+          default: nowDefault(),
+        }),
+      ]),
+    ]);
+    await emitModels(ctx, { declarationStyle: "domain-class" });
+    const out = writer.files.get("Order.ts")!;
+    expect(out).not.toContain("@remarks Prisma-assigned");
+  });
+});
+
 describe('declarationStyle: "domain-class" — nullable + default truth gap', () => {
   it("initialises a nullable+function-default (`@default(now())`) private slot to null, not `!`", async () => {
     // `dateCreated DateTime? @default(now())` — prisma-assigned, so the

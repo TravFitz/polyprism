@@ -48,14 +48,10 @@ pnpm prisma generate
 - **`@normalise(trim, lowercase, uppercase, nullEmptyToNull)`** to pipe string-typed fields through ordered transforms on assignment.
 - **Constructor**: `new User({ ... })` — object-arg with defaults applied for fields that have them.
 - **Prisma-friendly**: `prisma.user.create({ data: userInstance })` works directly because the instance exposes enumerable accessors. No `toData()` plumbing.
-- **JSON-safe**: `JSON.stringify(userInstance)` produces wire-safe output natively. `BigInt` columns get a custom `toJSON()` (post-rc.1).
-- **`User.from(plainObject)`** static factory — assigns via setters, ignores unknown keys (post-rc.1).
-- **`User.builder()...build()`** fluent constructor (post-rc.2).
+- **JSON-safe**: `JSON.stringify(userInstance)` produces wire-safe output natively. Models with `BigInt` columns also get a custom `toJSON()` so `JSON.stringify` doesn't throw on bigints.
+- **`User.from(plainObject)`** static factory — hydrate a class instance from an untrusted shape (HTTP body, Prisma row, queue message). Assigns via setters so `@coerce` / `@normalise` fire on the way in; unknown keys are silently dropped.
+- **`User.builder()...build()`** fluent builder with one chainable method per init-writable field.
 - Everything `ts-class` gives you (standalone enum files, three-axis naming, JSDoc preservation, `@db.X` precision metadata, etc.).
-
-## Status
-
-Currently in v0.2.0 release-candidate flow. rc.0 ships the core emitter + `@coerce` / `@normalise` semantics. `from()`, `toJSON()`, and the builder land in subsequent RCs.
 
 ## Sibling patterns
 

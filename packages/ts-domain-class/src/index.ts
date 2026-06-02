@@ -1,8 +1,9 @@
 // @polyprism/ts-domain-class — emits opinionated TypeScript domain classes:
 // private fields + per-instance enumerable accessors + setters that honour
 // @coerce / @normalise (default-coerce on Int/Float/Decimal/BigInt/DateTime;
-// strict by default elsewhere). Plus (post-rc.1) from() and toJSON(), and
-// (post-rc.2) a fluent builder.
+// strict by default elsewhere), a static from() factory that hydrates from
+// untrusted Record<string, unknown> shapes, a toJSON() that handles BigInt
+// safely, and a fluent builder.
 //
 // The setter pipeline routes through @polyprism/runtime helpers — the one
 // PolyPrism runtime dep, only required for this pattern.

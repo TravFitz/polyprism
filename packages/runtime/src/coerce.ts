@@ -40,9 +40,23 @@ export function coerceInt(value: number | string, fieldPath: string): number {
   return next;
 }
 
-/** Coerce `number | string` → floating-point `number`. Throws on non-finite results. */
+/**
+ * Coerce `number | string` → floating-point `number`. Throws on non-finite
+ * results AND on strings that don't fully match a numeric shape.
+ *
+ * We use `Number()` (strict) instead of `Number.parseFloat()` (lenient prefix
+ * parser) because parseFloat silently accepts garbage tails: `parseFloat
+ * ("5.5abc")` returns `5.5`. For a setter accepting `"amount" → Float`, that
+ * means a malformed boundary payload stores partial data instead of throwing.
+ * `Number("5.5abc")` returns `NaN`, which our isFinite check rejects. The
+ * empty-string guard mirrors coerceInt's: `Number("")` returns `0`, which is
+ * "finite" but semantically wrong for an empty input.
+ */
 export function coerceFloat(value: number | string, fieldPath: string): number {
-  const next = typeof value === "string" ? Number.parseFloat(value) : value;
+  if (typeof value === "string" && value.trim() === "") {
+    throw new TypeError(`Cannot coerce ${JSON.stringify(value)} to float for ${fieldPath}`);
+  }
+  const next = typeof value === "string" ? Number(value) : value;
   if (!Number.isFinite(next)) {
     throw new TypeError(`Cannot coerce ${JSON.stringify(value)} to float for ${fieldPath}`);
   }
@@ -55,9 +69,17 @@ export function coerceFloat(value: number | string, fieldPath: string): number {
  * `BigInt()` itself throws SyntaxError on non-integer strings (`"1.5"`) and
  * RangeError on non-integer numbers. We rewrap as TypeError with the field
  * path so callers don't have to discriminate between three error types.
+ *
+ * The empty/whitespace-string guard exists because `BigInt("")` and
+ * `BigInt("   ")` both return `0n` (spec behaviour, not a bug in BigInt
+ * itself). That would silently stamp an empty-string id from a boundary
+ * payload as a valid zero — worse failure mode than throwing.
  */
 export function coerceBigInt(value: bigint | number | string, fieldPath: string): bigint {
   if (typeof value === "bigint") return value;
+  if (typeof value === "string" && value.trim() === "") {
+    throw new TypeError(`Cannot coerce ${JSON.stringify(value)} to bigint for ${fieldPath}`);
+  }
   try {
     return BigInt(value);
   } catch {

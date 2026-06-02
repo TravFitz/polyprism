@@ -18,6 +18,9 @@ export class OrderItem {
   #orderId!: bigint;
   #order!: Order;
 
+  /**
+   * @remarks Prisma-assigned at insert time — reading on a freshly-constructed instance returns `undefined` until the row has been persisted (and `from()` has hydrated the value back, or Prisma has returned the populated row). The declared type is honest post-insert.
+   */
   get id(): string {
     return this.#id;
   }
@@ -90,7 +93,14 @@ export class OrderItem {
    * does not reject explicit `null` for non-nullable fields, and does not
    * verify cross-field invariants. If the inbound data is untrusted (HTTP
    * body, queue message, third-party API), pre-validate at the boundary —
-   * runtime schema validation arrives in `@polyprism/ts-zod`.
+   * a Zod-based runtime validation pattern is planned for a future release.
+   *
+   * **Can still throw at the setter.** Even though there's no validation
+   * layer, individual setters may throw `TypeError` if a value can't be
+   * coerced to the declared type (e.g. a non-numeric string for an `Int`
+   * column). This applies to both the init-shape keys and the
+   * prisma-assigned keys (id, createdAt, etc.) that get assigned
+   * post-construction. The error includes the field path.
    */
   static from(data: Record<string, unknown>): OrderItem {
     const initKeys = ["sku", "quantity", "unitPrice", "orderId", "order"] as const;

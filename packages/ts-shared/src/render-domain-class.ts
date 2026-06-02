@@ -507,14 +507,14 @@ function isInitOptional(plan: FieldPlan): boolean {
 }
 
 function renderAccessorBlock(plan: FieldPlan, modelName: string): string {
-  const { ident, declaredType, decision, field } = plan;
+  const { ident, declaredType, decision, field, initFallback } = plan;
   const fieldPath = `${modelName}.${field.name}`;
   const setterParam = `v: ${decision.setterInputType}`;
   const assignExpr = renderSetterAssign(plan, fieldPath);
 
   const doc = renderJsDoc(field.annotations, {
     indent: 2,
-    extraTags: buildFieldExtraTags(field),
+    extraTags: buildFieldExtraTags(field, initFallback),
   });
 
   return (
@@ -559,7 +559,15 @@ function renderSetterAssign(plan: FieldPlan, fieldPath: string): string {
   // (2) coerce
   const coerceExpr = renderCoerceCall(decision, valueExpr, fieldPath);
 
-  if (nullable) {
+  // The null-guard wrap is only needed when there's actual work to skip on
+  // null input — either a coerce call (which would throw on null) or a
+  // normalise call (which is null-safe for normaliseNullable but emitting
+  // the guard keeps the call tighter). For a strict pass-through field with
+  // no normalisation, the wrap collapses to `v === null ? null : v`, which
+  // is just `v` — cosmetic dead code in the generated output. Skip it.
+  const hasRuntimeWork = decision.kind !== "strict" || normaliseOps.length > 0;
+
+  if (nullable && hasRuntimeWork) {
     return `this.#${ident} = v === null ? null : ${coerceExpr};`;
   }
   return `this.#${ident} = ${coerceExpr};`;
@@ -615,13 +623,33 @@ function renderInitAssignment(plan: FieldPlan): string | null {
   return `    if (init.${ident} !== undefined) this.${ident} = init.${ident};`;
 }
 
-function buildFieldExtraTags(field: {
-  nativeType: { name: string; args: readonly string[] } | null;
-}): string[] {
+function buildFieldExtraTags(
+  field: {
+    isRequired: boolean;
+    isList: boolean;
+    nativeType: { name: string; args: readonly string[] } | null;
+  },
+  initFallback: FieldPlan["initFallback"],
+): string[] {
   const tags: string[] = [];
   if (field.nativeType) {
     const args = field.nativeType.args.join(", ");
     tags.push(args ? `@db.${field.nativeType.name}(${args})` : `@db.${field.nativeType.name}`);
+  }
+  // For required + prisma-assigned fields (`@default(cuid())`,
+  // `@default(now())`, `@default(autoincrement())`, etc.), the declared
+  // getter type is honest only AFTER Prisma persists the row. On a
+  // freshly-constructed instance the private slot is `undefined`, which
+  // means a consumer doing `const o = new Order({...}); o.id.toString()`
+  // hits "Cannot read properties of undefined" with no field context.
+  // Surface the contract via an `@remarks` JSDoc tag so IDE hovers + npm
+  // doc tooling pick it up. We don't make the getter throw because the
+  // graceful-undefined behaviour is load-bearing for toJSON() — see the
+  // `=== undefined` guard for BigInt fields in renderToJSONMethod.
+  if (field.isRequired && !field.isList && initFallback.kind === "prisma-assigned") {
+    tags.push(
+      "@remarks Prisma-assigned at insert time — reading on a freshly-constructed instance returns `undefined` until the row has been persisted (and `from()` has hydrated the value back, or Prisma has returned the populated row). The declared type is honest post-insert.",
+    );
   }
   return tags;
 }
@@ -688,7 +716,14 @@ function renderFromMethod(selfIdent: string, plans: readonly FieldPlan[]): strin
     `   * does not reject explicit \`null\` for non-nullable fields, and does not\n` +
     `   * verify cross-field invariants. If the inbound data is untrusted (HTTP\n` +
     `   * body, queue message, third-party API), pre-validate at the boundary —\n` +
-    `   * runtime schema validation arrives in \`@polyprism/ts-zod\`.\n` +
+    `   * a Zod-based runtime validation pattern is planned for a future release.\n` +
+    `   *\n` +
+    `   * **Can still throw at the setter.** Even though there's no validation\n` +
+    `   * layer, individual setters may throw \`TypeError\` if a value can't be\n` +
+    `   * coerced to the declared type (e.g. a non-numeric string for an \`Int\`\n` +
+    `   * column). This applies to both the init-shape keys and the\n` +
+    `   * prisma-assigned keys (id, createdAt, etc.) that get assigned\n` +
+    `   * post-construction. The error includes the field path.\n` +
     `   */\n` +
     `  static from(data: Record<string, unknown>): ${selfIdent} {\n` +
     `${initFilterBlock}` +

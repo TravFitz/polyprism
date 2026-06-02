@@ -109,6 +109,21 @@ describe("coerceFloat", () => {
   it("throws TypeError when input is Infinity", () => {
     expect(() => coerceFloat(Number.POSITIVE_INFINITY, "T.f")).toThrowError(/Cannot coerce/);
   });
+
+  it("throws on garbage-tail strings — Number() is strict, no parseFloat-style prefix parsing", () => {
+    // The whole string must be a valid number. "5.5abc" silently became 5.5
+    // before the Number() switch; that was a contract gap on the Float setter.
+    expect(() => coerceFloat("5.5abc", "Order.exchangeRate")).toThrowError(
+      /Cannot coerce "5.5abc" to float for Order\.exchangeRate/,
+    );
+    expect(() => coerceFloat("3.14garbage", "T.f")).toThrowError(/Cannot coerce/);
+    expect(() => coerceFloat("5abc", "T.f")).toThrowError(/Cannot coerce/);
+  });
+
+  it("throws on empty / whitespace-only strings (Number('') is 0, semantically wrong)", () => {
+    expect(() => coerceFloat("", "T.f")).toThrowError(/Cannot coerce "" to float/);
+    expect(() => coerceFloat("   ", "T.f")).toThrowError(/Cannot coerce " {3}" to float/);
+  });
 });
 
 describe("coerceBigInt", () => {
@@ -151,6 +166,15 @@ describe("coerceBigInt", () => {
 
   it("throws TypeError on Infinity", () => {
     expect(() => coerceBigInt(Number.POSITIVE_INFINITY, "T.f")).toThrowError(/Cannot coerce/);
+  });
+
+  it("throws on empty / whitespace-only strings (BigInt('') is 0n natively, semantically wrong)", () => {
+    // Without the guard, `BigInt("")` returns `0n` — an empty-string id from
+    // a boundary payload would silently become a valid-looking zero.
+    expect(() => coerceBigInt("", "Order.id")).toThrowError(
+      /Cannot coerce "" to bigint for Order\.id/,
+    );
+    expect(() => coerceBigInt("   ", "T.f")).toThrowError(/Cannot coerce " {3}" to bigint/);
   });
 });
 

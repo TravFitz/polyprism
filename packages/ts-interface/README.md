@@ -57,7 +57,7 @@ Every enum is **also** emitted as its own standalone ESM file at `<output>/enums
 - **Prisma 6 & 7 compatibility** — same generator binary, both Prisma majors. CI tests against both, including the Prisma 7 `prisma.config.ts` layout.
 - **Pure ESM** from day one — not retrofitted from a CJS codebase. No `require()`, no `.cjs` re-export shims, no surprise.
 - **Zero third-party runtime dependencies.** This package depends only on `@polyprism/core` and `@polyprism/ts-shared`, neither of which has a third-party runtime dep.
-- **Seven `///` annotations** — see [Annotations](#annotations) below.
+- **Eight `///` annotations** — see [Annotations](#annotations) below.
 - **Three-axis naming config** — independently control file, type, and field naming (`snake_case`, `kebab-case`, `PascalCase`, `camelCase`, or `preserve`).
 - **Per-identifier `@name(NewName)` override** — escape hatch for the global naming rule.
 - **`@db.X(p, s)` precision captured as JSDoc** so the schema-level info survives codegen.

@@ -23,7 +23,7 @@ It's the brain every pattern package shares:
 
 - **IR** — `ModelDef`, `FieldDef`, `EnumDef`, `AnnotationSet`. A language-agnostic intermediate representation of your Prisma schema that every emitter reads from.
 - **Schema reader** — DMMF → IR translation. **Internal; never exported.** This firewall is what lets pattern packages stay third-party-runtime-dep-free, and keeps Prisma's officially-unstable DMMF surface from leaking into user code.
-- **Annotation parser** — `parseAnnotations` understands seven triple-slash annotations: `@hide`, `@deprecated`, `@json` (four forms), `@type`, `@name`, `@normalise`, `@coerce`. Plus [`prisma-json-types-generator`](https://github.com/arthurfiorette/prisma-json-types-generator) shorthand compatibility (`/// [TypeName]`).
+- **Annotation parser** — `parseAnnotations` understands eight triple-slash annotations: `@hide`, `@deprecated`, `@json` (four forms), `@type`, `@name`, `@normalise`, `@coerce`, `@noCoerce`. Plus [`prisma-json-types-generator`](https://github.com/arthurfiorette/prisma-json-types-generator) shorthand compatibility (`/// [TypeName]`).
 - **Naming resolver** — `resolveTypeIdent`, `resolveFieldIdent`, `resolveTypeFilename`. Three-axis (file / type / field) casing config: snake, kebab, Pascal, camel, preserve. With per-identifier `@name(NewName)` overrides.
 - **Generator runtime** — `defineGenerator`, `GeneratorContext`, virtual filesystem for testability.
 - **Shared emitter helpers** — `emitEnums`, `emitJsonTypes`, `prettyFormatType`, `createInMemoryFileWriter`.

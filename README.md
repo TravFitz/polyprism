@@ -46,9 +46,9 @@ if any of the above lines up with what you're after, give it a spin.
 
 ## Features (v0.1)
 
-- **3 output patterns** today, more to come: `ts-interface`, `ts-type`, `ts-class`.
+- **4 output patterns** today, more to come: `ts-interface`, `ts-type`, `ts-class`, `ts-domain-class` (opinionated class with setter-driven `@normalise` + `@coerce` data laundering, `from()`, `toJSON()`, and a fluent builder).
 - **Always-on standalone enum files** — every Prisma enum is also written to its own importable file, so you can `Object.values(MyEnum)` directly without re-exporting from `@prisma/client` (whose CJS shape doesn't always play nicely with ESM consumers).
-- **7 doc-comment annotations**: `@hide`, `@deprecated`, `@json` (4 forms), `@type`, `@name`, `@normalise`, `@coerce`.
+- **8 doc-comment annotations**: `@hide`, `@deprecated`, `@json` (4 forms), `@type`, `@name`, `@normalise`, `@coerce`, `@noCoerce`.
 - **`prisma-json-types-generator` shorthand compatibility**: accepts `/// [TypeName]` as an alias for `@json(TypeName)`.
 - **Three-axis naming config**: file, type, field — each pickable independently. Snake, kebab, Pascal, camel, preserve.
 - **Per-identifier `@name(NewName)` override** — escape hatch for the global naming rule.
@@ -257,10 +257,9 @@ and a different complexity tier:
 
 | Version | Adds |
 |---|---|
-| **0.1** (now) | `ts-interface`, `ts-type`, `ts-class`, 7 annotations, three-axis naming, enum + JSON-type file emission |
+| **0.1** (now) | `ts-interface`, `ts-type`, `ts-class`, **`ts-domain-class`** (with setter-driven `@normalise`/`@coerce`, `from()`, `toJSON()`, fluent builder), `runtime` helpers, 8 annotations, three-axis naming, enum + JSON-type file emission |
 | 0.2 | Polish: error messages with schema line numbers, JSDoc emission from Prisma `///` comments on models, richer README |
-| 0.3 | `ts-domain-class` — private state + getters/setters + builder + `from()` + `toJSON()`. `@normalise` + `@coerce` become active here. |
-| 0.4 | `ts-zod` — Zod schema emission, sharing the same naming and annotation pipeline as the type-shape patterns |
+| 0.3 | `ts-zod` — Zod schema emission, sharing the same naming and annotation pipeline as the type-shape patterns |
 | 1.0 | Docs site, JSON-Schema-validated config, public stability commitment on the emitter API |
 | Later | `ts-valibot`, `ts-arktype`, `ts-typebox`, `ts-effect-schema`, `ts-standard-schema`, PHP emitter family |
 
