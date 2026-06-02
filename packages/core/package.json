@@ -1,6 +1,6 @@
 {
   "name": "@polyprism/core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Prisma schema IR, reader, annotation parser, and naming layer powering PolyPrism's Prisma 6 & 7 generators. Pure ESM, zero third-party runtime deps.",
   "type": "module",
   "license": "MIT",
