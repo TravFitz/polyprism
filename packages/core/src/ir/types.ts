@@ -70,10 +70,23 @@ export interface AnnotationSet {
   name: string | null;
   normalise: readonly NormaliseOp[] | null;
   coerce: CoerceTo | null;
+  /**
+   * Opts a default-coerce field (Int, Float, Decimal, BigInt, DateTime) out
+   * of the implicit setter widening in ts-domain-class. No effect on
+   * strict-by-default types (Boolean, String, enums, relations, Json, Bytes)
+   * — the emitter will emit a soft warning in that case.
+   */
+  noCoerce: boolean;
   /** Documentation text stripped of annotation lines; preserved for JSDoc emission. */
   documentation: string | null;
   /** Raw annotation source kept for debugging / unknown-annotation warnings. */
   rawAnnotations: readonly string[];
+  /**
+   * Issues raised at parse time (e.g. an annotation that doesn't accept args
+   * was called with args). Renderers should surface these alongside their
+   * own emit-time issues so the user sees a single combined report.
+   */
+  parseIssues: readonly { readonly severity: "error" | "warning"; readonly message: string }[];
 }
 
 export interface FieldDef {
@@ -151,7 +164,9 @@ export function emptyAnnotationSet(documentation: string | null): AnnotationSet 
     name: null,
     normalise: null,
     coerce: null,
+    noCoerce: false,
     documentation,
     rawAnnotations: [],
+    parseIssues: [],
   };
 }

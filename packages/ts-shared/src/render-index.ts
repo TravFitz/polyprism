@@ -2,10 +2,14 @@
 // Off by default — opt-in via `emitIndex = true` in the generator block.
 //
 // Model re-export form depends on declarationStyle:
-//   - "interface" / "type" → `export type { User }` (type-only)
-//   - "class"              → `export { User }`      (class is a runtime value)
+//   - "interface" / "type"          → `export type { User }` (type-only)
+//   - "class" / "domain-class"      → `export { User }`      (class is a runtime value)
 //
 // Enums are always runtime values; JSON types are always type-only.
+//
+// Note: domain-class also exports a `UserInit` interface alongside the class.
+// We don't re-export `UserInit` from the barrel today (it's an
+// implementation-detail type). Add it here if a downstream consumer asks.
 
 import type { GeneratorContext } from "@polyprism/core";
 import { autoNameInlineJson, resolveTypeFilename, resolveTypeIdent } from "@polyprism/core";
@@ -18,7 +22,10 @@ export interface RenderIndexOptions {
 
 export function renderIndex(ctx: GeneratorContext, opts: RenderIndexOptions): string {
   const lines: string[] = [];
-  const modelExportKeyword = opts.declarationStyle === "class" ? "export" : "export type";
+  const modelExportKeyword =
+    opts.declarationStyle === "class" || opts.declarationStyle === "domain-class"
+      ? "export"
+      : "export type";
 
   // Models
   for (const model of ctx.ir.models) {

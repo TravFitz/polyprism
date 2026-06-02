@@ -1,21 +1,18 @@
 {
-  "name": "@polyprism/ts-type",
+  "name": "@polyprism/runtime",
   "version": "0.1.0",
-  "description": "Prisma 6 & 7 generator that emits TypeScript type aliases (`export type User = { ... }`) from your schema. Pure ESM, zero runtime deps, configurable naming + annotations. Part of PolyPrism.",
+  "description": "Runtime helpers (normalise + coerce primitives) used by @polyprism/ts-domain-class. The one PolyPrism runtime dep — only required when you choose the opinionated domain-class pattern. Pure ESM, zero third-party runtime deps.",
   "type": "module",
   "license": "MIT",
   "author": "Travis Fitzgerald",
-  "homepage": "https://github.com/TravFitz/polyprism/tree/main/packages/ts-type",
+  "homepage": "https://github.com/TravFitz/polyprism/tree/main/packages/runtime",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/TravFitz/polyprism.git",
-    "directory": "packages/ts-type"
+    "directory": "packages/runtime"
   },
   "bugs": {
     "url": "https://github.com/TravFitz/polyprism/issues"
-  },
-  "bin": {
-    "polyprism-ts-type": "./dist/generator.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -38,22 +35,18 @@
   },
   "keywords": [
     "prisma",
-    "prisma-generator",
     "prisma-7",
-    "typescript",
-    "type-alias",
-    "codegen",
-    "esm",
-    "polyprism"
+    "polyprism",
+    "runtime",
+    "coerce",
+    "normalise",
+    "esm"
   ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
-  },
-  "dependencies": {
-    "@polyprism/core": "workspace:*",
-    "@polyprism/ts-shared": "workspace:*"
+    "test": "vitest run",
+    "test:watch": "vitest"
   }
 }

@@ -10,6 +10,7 @@
   "ignore": [
     "polyprism-example-simple-blog",
     "polyprism-example-task-tracker",
-    "polyprism-example-complex-ecommerce"
+    "polyprism-example-complex-ecommerce",
+    "polyprism-example-domain-class-showcase"
   ]
 }

@@ -59,6 +59,77 @@ describe("parseAnnotations", () => {
     expect(result.coerce).toBeNull();
   });
 
+  describe("regression: apostrophes in prose don't swallow trailing annotations", () => {
+    it("recognises @coerce(int) on a later line even when an earlier doc line has an apostrophe", () => {
+      const doc = "Shopify's API returns this column as a stringified int.\n@coerce(int)";
+      const result = parseAnnotations(doc);
+      expect(result.coerce).toBe("int");
+      expect(result.documentation).toBe("Shopify's API returns this column as a stringified int.");
+    });
+
+    it("recognises @deprecated on a later line when prose has an apostrophe", () => {
+      const doc = "The user's preferred name display.\n@deprecated";
+      const result = parseAnnotations(doc);
+      expect(result.deprecated).toEqual({ reason: null });
+      expect(result.documentation).toBe("The user's preferred name display.");
+    });
+
+    it("still respects quotes inside annotation args (string tracking when in parens)", () => {
+      // The whole point of the original string-tracking was that a `)` inside
+      // a quoted annotation arg shouldn't close the paren prematurely.
+      const result = parseAnnotations('@deprecated("use renderUserName(ctx)")');
+      expect(result.deprecated).toEqual({ reason: "use renderUserName(ctx)" });
+    });
+  });
+
+  describe("@noCoerce", () => {
+    it("parses @noCoerce (no args)", () => {
+      const result = parseAnnotations("@noCoerce");
+      expect(result.noCoerce).toBe(true);
+    });
+
+    it("parses @noCoerce() (empty parens)", () => {
+      const result = parseAnnotations("@noCoerce()");
+      expect(result.noCoerce).toBe(true);
+    });
+
+    it("defaults noCoerce to false when annotation is absent", () => {
+      const result = parseAnnotations("@hide");
+      expect(result.noCoerce).toBe(false);
+    });
+
+    it("defaults noCoerce to false on completely empty input", () => {
+      const result = parseAnnotations(null);
+      expect(result.noCoerce).toBe(false);
+    });
+
+    it("preserves raw annotation text for debugging", () => {
+      const result = parseAnnotations("@noCoerce");
+      expect(result.rawAnnotations).toContain("@noCoerce");
+    });
+
+    it("can coexist with other annotations", () => {
+      const result = parseAnnotations("@noCoerce\n@deprecated");
+      expect(result.noCoerce).toBe(true);
+      expect(result.deprecated).toEqual({ reason: null });
+    });
+
+    it("warns (but still applies) when @noCoerce is called with arguments", () => {
+      const result = parseAnnotations("@noCoerce(int)");
+      expect(result.noCoerce).toBe(true);
+      expect(result.parseIssues).toHaveLength(1);
+      expect(result.parseIssues[0]?.severity).toBe("warning");
+      expect(result.parseIssues[0]?.message).toMatch(/@noCoerce takes no arguments/);
+      expect(result.parseIssues[0]?.message).toMatch(/int/);
+    });
+
+    it("does NOT warn for bare @noCoerce or @noCoerce()", () => {
+      expect(parseAnnotations("@noCoerce").parseIssues).toHaveLength(0);
+      expect(parseAnnotations("@noCoerce()").parseIssues).toHaveLength(0);
+      expect(parseAnnotations("@noCoerce(   )").parseIssues).toHaveLength(0);
+    });
+  });
+
   describe("@json forms", () => {
     it("form 1: bare type name", () => {
       const result = parseAnnotations("@json(UserMetadata)");

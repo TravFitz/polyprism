@@ -1,0 +1,176 @@
+// Domain-class showcase example.
+// A billing/orders schema designed to exercise every behaviour of the
+// `polyprism-ts-domain-class` emitter:
+//
+//   - **Default-coerce types** — Int, Float, Decimal, BigInt, DateTime get
+//     widened setter inputs that accept stringified primitives from
+//     untrusted boundaries (HTTP bodies, Shopify GraphQL responses).
+//   - **Strict-by-default types** — Boolean, String, enums, relations, Json,
+//     Bytes pass through unchanged.
+//   - **`@noCoerce`** opts a default-coerce field out (e.g. `internalSeq`,
+//     where strict typing matters more than boundary tolerance).
+//   - **`@coerce(target)`** opts a strict-by-default field in to cross-type
+//     casting (rare; the `Customer.legacyExternalId` shows it).
+//   - **`@normalise(...)`** transforms string inputs on assignment — `trim`,
+//     `lowercase`, `uppercase`, `nullEmptyToNull` (only on nullable strings).
+//   - **`@hide`** removes a field from the class + Init entirely (no
+//     setter, no getter, not in the constructor's accepted shape).
+//   - **`@deprecated`** emits a JSDoc tag on the getter (visible in IDEs).
+//   - **Inline JSON type** — `Customer.languageSettings` shows the
+//     inline-named form that gets a generated `json-types/...` import.
+//   - **Mixed required / optional / defaulted** fields exercise the
+//     `Init`-interface optional-vs-required split (`?:` vs `:`).
+//   - **Relations** — 1-to-1 (Customer ↔ Address), 1-to-many (Customer ↔
+//     Order), self-reference (Order.parentOrder via parentOrderId).
+//
+// Pattern: `polyprism-ts-domain-class`.
+
+generator polyprismCodegen {
+  provider  = "polyprism-ts-domain-class"
+  output    = "../generated"
+  emitIndex = "true"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Enums
+// ───────────────────────────────────────────────────────────────────────────
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FULFILLED
+  CANCELLED
+  /// @deprecated("merge into CANCELLED; the previous distinction is no longer tracked")
+  REFUNDED
+}
+
+enum CustomerTier {
+  STANDARD
+  PRIORITY
+  VIP
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Models
+// ───────────────────────────────────────────────────────────────────────────
+
+model Customer {
+  id              String        @id @default(cuid())
+
+  /// Normalised: trimmed + lowercased on assignment.
+  /// @normalise(trim, lowercase)
+  email           String        @unique
+
+  /// Normalised: trimmed only — preserves original casing for display.
+  /// @normalise(trim)
+  displayName     String
+
+  tier            CustomerTier  @default(STANDARD)
+
+  /// Strict-coerce: internal counter that must always be a plain number.
+  /// Boundary code passing "5" here is a bug, not data laundering.
+  /// @noCoerce
+  internalSeq     Int           @default(0)
+
+  /// Cross-type @coerce: this column stores Shopify's stringified legacy IDs.
+  /// The setter accepts both the canonical String form and a Number, casting
+  /// numerics to string on the way in.
+  /// @coerce(string)
+  legacyExternalId String?
+
+  /// Nullable string normalised, with empty-string → null collapse.
+  /// @normalise(trim, nullEmptyToNull)
+  vatNumber       String?
+
+  /// Inline-named JSON. Emits to json-types/CustomerLanguageSettings.ts.
+  /// @json(CustomerLanguageSettings = { default: string, fallbacks: string[], rtl: boolean })
+  languageSettings Json
+
+  /// Hidden: never appears in CustomerInit or the class surface.
+  /// @hide
+  passwordHash    String
+
+  createdAt       DateTime      @default(now())
+
+  // Relations
+  address         Address?
+  orders          Order[]
+}
+
+model Address {
+  id              String        @id @default(cuid())
+
+  /// @normalise(trim)
+  line1           String
+
+  /// @normalise(trim, nullEmptyToNull)
+  line2           String?
+
+  /// ISO country code, normalised to uppercase to match @db.VarChar(2).
+  /// @normalise(trim, uppercase)
+  countryCode     String        @db.VarChar(2)
+
+  /// Decimal default-coerce — accepts Decimal, number, or string. Shopify
+  /// money values arrive as "10.99" strings; this lets them flow through.
+  /// @db.Decimal(15, 2)
+  shippingRate    Decimal       @default(0)
+
+  customerId      String        @unique
+  customer        Customer      @relation(fields: [customerId], references: [id])
+
+  createdAt       DateTime      @default(now())
+}
+
+model Order {
+  /// BigInt default-coerce — accepts bigint, number, or stringified bigint.
+  /// Shopify order IDs frequently overflow Number.MAX_SAFE_INTEGER.
+  id              BigInt        @id @default(autoincrement())
+
+  status          OrderStatus   @default(PENDING)
+
+  /// @db.Decimal(15, 2)
+  total           Decimal
+
+  /// Float default-coerce.
+  exchangeRate    Float         @default(1.0)
+
+  /// Int default-coerce.
+  itemCount       Int           @default(0)
+
+  /// DateTime default-coerce — accepts Date, ISO string, or epoch number.
+  placedAt        DateTime      @default(now())
+
+  /// Nullable DateTime — coerce-by-default still applies, just widened to | null.
+  paidAt          DateTime?
+
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id])
+
+  // Self-reference: a refunded order can point at the original it replaces.
+  parentOrderId   BigInt?
+  parentOrder     Order?        @relation("OrderRefunds", fields: [parentOrderId], references: [id])
+  refunds         Order[]       @relation("OrderRefunds")
+
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id              String        @id @default(cuid())
+
+  /// @normalise(trim)
+  sku             String
+
+  /// Int default-coerce.
+  quantity        Int           @default(1)
+
+  /// Decimal default-coerce; per-unit price.
+  /// @db.Decimal(15, 2)
+  unitPrice       Decimal
+
+  orderId         BigInt
+  order           Order         @relation(fields: [orderId], references: [id])
+}

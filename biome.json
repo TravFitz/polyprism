@@ -13,10 +13,10 @@
       "**/*.mjs",
       "**/*.cjs",
       "**/*.json",
-      "!**/dist/**",
-      "!**/node_modules/**",
-      "!**/coverage/**",
-      "!**/generated/**"
+      "!**/dist",
+      "!**/node_modules",
+      "!**/coverage",
+      "!**/generated"
     ],
     "experimentalScannerIgnores": [
       "**/dist/**",

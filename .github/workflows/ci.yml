@@ -144,7 +144,7 @@ jobs:
         # so its generated output is intentionally not self-resolving.
         run: |
           set -e
-          for example in examples/simple-blog/generated examples/task-tracker/generated; do
+          for example in examples/simple-blog/generated examples/task-tracker/generated examples/domain-class-showcase/generated; do
             echo "::group::Typecheck $example"
             find "$example" -name "*.ts" -type f -print0 \
               | xargs -0 ./node_modules/.bin/tsc \

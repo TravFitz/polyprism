@@ -41,9 +41,12 @@ export function parseAnnotations(doc: string | null): AnnotationSet {
     name: null,
     normalise: null,
     coerce: null,
+    noCoerce: false,
     documentation: null,
     rawAnnotations: [],
+    parseIssues: [],
   };
+  const parseIssues: { severity: "error" | "warning"; message: string }[] = [];
 
   if (!doc) return result;
 
@@ -65,7 +68,7 @@ export function parseAnnotations(doc: string | null): AnnotationSet {
     // @ident or @ident(args)
     const annotationMatch = /^@(\w+)(?:\s*\(([\s\S]*)\))?$/.exec(trimmed);
     if (annotationMatch) {
-      applyAnnotation(annotationMatch[1]!, annotationMatch[2] ?? null, result);
+      applyAnnotation(annotationMatch[1]!, annotationMatch[2] ?? null, result, parseIssues);
       rawAnnotations.push(trimmed);
       continue;
     }
@@ -77,6 +80,7 @@ export function parseAnnotations(doc: string | null): AnnotationSet {
   const joinedDoc = docLines.join("\n").trim();
   result.documentation = joinedDoc.length > 0 ? joinedDoc : null;
   result.rawAnnotations = rawAnnotations;
+  result.parseIssues = parseIssues;
   return result;
 }
 
@@ -108,7 +112,15 @@ function splitLogicalLines(doc: string): string[] {
         if (ch === inString) inString = null;
         continue;
       }
-      if (ch === '"' || ch === "'" || ch === "`") {
+      // String-literal tracking is meant for annotation args like
+      // `@deprecated("use newName")` and `@json({ s: "x" })` where braces /
+      // parens inside a quoted segment must not unbalance the depth count.
+      // Plain documentation text like "Shopify's GraphQL API" contains
+      // apostrophes that shouldn't open string mode — they're prose, not
+      // syntax — so we only enter string mode when actually inside a
+      // parens/braces/brackets block.
+      const insideBlock = parenDepth > 0 || braceDepth > 0 || bracketDepth > 0;
+      if (insideBlock && (ch === '"' || ch === "'" || ch === "`")) {
         inString = ch;
         continue;
       }
@@ -132,7 +144,12 @@ function splitLogicalLines(doc: string): string[] {
   return logical;
 }
 
-function applyAnnotation(name: string, args: string | null, set: AnnotationSet): void {
+function applyAnnotation(
+  name: string,
+  args: string | null,
+  set: AnnotationSet,
+  parseIssues: { severity: "error" | "warning"; message: string }[],
+): void {
   switch (name) {
     case "hide":
       set.hide = true;
@@ -155,6 +172,22 @@ function applyAnnotation(name: string, args: string | null, set: AnnotationSet):
       return;
     case "coerce":
       set.coerce = parseCoerceArg(args);
+      return;
+    case "noCoerce":
+      // Takes no args. We tolerate `@noCoerce()` (empty parens) too — the
+      // regex captures args as either null or an empty/whitespace string.
+      // Non-empty args are accepted but warned-on, because `@noCoerce(int)`
+      // reads like it means something specific ("don't coerce ints") when
+      // it actually does the same thing as bare `@noCoerce`.
+      if (args !== null && args.trim().length > 0) {
+        parseIssues.push({
+          severity: "warning",
+          message:
+            `@noCoerce takes no arguments — got '${args.trim()}', which has been ignored. ` +
+            `Use bare \`@noCoerce\` to opt this field out of default coercion.`,
+        });
+      }
+      set.noCoerce = true;
       return;
     default:
       // Unknown annotation — already captured in rawAnnotations; ignored otherwise.

@@ -1,7 +1,7 @@
 {
   "name": "@polyprism/ts-shared",
   "version": "0.1.0",
-  "description": "Shared TypeScript rendering primitives used by PolyPrism's TS pattern emitters (ts-interface, ts-type, ts-class).",
+  "description": "Shared TypeScript rendering primitives used by PolyPrism's Prisma 6 & 7 generators (ts-interface, ts-type, ts-class). Pure ESM.",
   "type": "module",
   "license": "MIT",
   "author": "Travis Fitzgerald",
@@ -36,8 +36,10 @@
   "keywords": [
     "prisma",
     "prisma-generator",
+    "prisma-7",
     "typescript",
     "codegen",
+    "esm",
     "polyprism"
   ],
   "scripts": {

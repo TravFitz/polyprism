@@ -1,7 +1,7 @@
 {
   "name": "@polyprism/ts-class",
   "version": "0.1.0",
-  "description": "TypeScript class emitter for PolyPrism. Emits plain classes with public fields from your Prisma schema (prisma-class-generator replacement, ESM-native).",
+  "description": "Prisma 6 & 7 generator that emits TypeScript classes from your schema. Pure ESM, zero runtime deps — a maintained replacement for prisma-class-generator. Part of PolyPrism.",
   "type": "module",
   "license": "MIT",
   "author": "Travis Fitzgerald",
@@ -39,9 +39,11 @@
   "keywords": [
     "prisma",
     "prisma-generator",
+    "prisma-7",
     "typescript",
     "class",
     "codegen",
+    "esm",
     "polyprism",
     "prisma-class-generator"
   ],

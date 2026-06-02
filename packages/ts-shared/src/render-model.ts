@@ -1,9 +1,15 @@
 // Renders one Prisma model as a TypeScript declaration.
 //
-// Three declaration styles supported via `declarationStyle`:
-//   "interface" → `export interface User { ... }`
-//   "type"      → `export type User = { ... };`
-//   "class"     → `export class User { id!: string; name: string | null = null; }`
+// Four declaration styles supported via `declarationStyle`:
+//   "interface"    → `export interface User { ... }`
+//   "type"         → `export type User = { ... };`
+//   "class"        → `export class User { id!: string; name: string | null = null; }`
+//   "domain-class" → `export class User { #id!: string; ... }` with per-instance
+//                    enumerable accessors, setter-driven @coerce / @normalise,
+//                    and a sibling `UserInit` interface. Dispatched out to
+//                    render-domain-class.ts — the logic doesn't share the
+//                    field-by-field rendering loop below because the constructor
+//                    + private-field + accessor layout is too divergent.
 //
 // All styles share field rendering, import collection, JSDoc emission, and
 // naming resolution. The "class" style additionally renders default-value
@@ -21,9 +27,10 @@ import { resolveFieldIdent, resolveTypeFilename, resolveTypeIdent } from "@polyp
 
 import { ImportCollector } from "./imports.js";
 import { renderJsDoc } from "./jsdoc.js";
+import { renderDomainClass } from "./render-domain-class.js";
 import { mapFieldTsType } from "./type-mapper.js";
 
-export type DeclarationStyle = "interface" | "type" | "class";
+export type DeclarationStyle = "interface" | "type" | "class" | "domain-class";
 
 export interface RenderModelOptions {
   readonly model: ModelDef;
@@ -33,6 +40,17 @@ export interface RenderModelOptions {
 }
 
 export function renderModel(opts: RenderModelOptions): string {
+  // Domain-class output is too divergent to share the field-by-field loop
+  // below — the constructor + private-field + per-instance defineProperty
+  // layout is rendered end-to-end by render-domain-class.ts. Issues
+  // surfaced by the coerce-rules validator are currently dropped here for
+  // string-output compatibility; emit-models will route them through a
+  // proper logger once issue reporting lands as a follow-up.
+  if (opts.declarationStyle === "domain-class") {
+    const { source } = renderDomainClass({ model: opts.model, ir: opts.ir, config: opts.config });
+    return source;
+  }
+
   const { model, ir, config, declarationStyle } = opts;
 
   // Pre-resolve enum and model identifiers so each field lookup is O(1).

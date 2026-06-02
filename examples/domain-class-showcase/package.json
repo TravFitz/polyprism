@@ -1,0 +1,19 @@
+{
+  "name": "polyprism-example-domain-class-showcase",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Showcase example for ts-domain-class — exercises every coerce-by-default target (Int/Float/Decimal/BigInt/DateTime), every @normalise op, @noCoerce, @hide, @deprecated, JSON types, mixed required/optional, and relations. Billing/orders shape so realistic shopify-duty-tax-style boundaries land naturally.",
+  "type": "module",
+  "scripts": {
+    "generate": "prisma generate",
+    "clean": "rm -rf generated"
+  },
+  "dependencies": {
+    "@polyprism/runtime": "workspace:*",
+    "@polyprism/ts-domain-class": "workspace:*",
+    "@prisma/client": "^6.19.3"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.3"
+  }
+}

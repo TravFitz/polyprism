@@ -1,21 +1,21 @@
 {
-  "name": "@polyprism/ts-type",
+  "name": "@polyprism/ts-domain-class",
   "version": "0.1.0",
-  "description": "Prisma 6 & 7 generator that emits TypeScript type aliases (`export type User = { ... }`) from your schema. Pure ESM, zero runtime deps, configurable naming + annotations. Part of PolyPrism.",
+  "description": "Prisma 6 & 7 generator that emits opinionated TypeScript domain classes — private fields, getters/setters with active @coerce + @normalise, builder, from(), toJSON(). Pure ESM. Part of PolyPrism.",
   "type": "module",
   "license": "MIT",
   "author": "Travis Fitzgerald",
-  "homepage": "https://github.com/TravFitz/polyprism/tree/main/packages/ts-type",
+  "homepage": "https://github.com/TravFitz/polyprism/tree/main/packages/ts-domain-class",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/TravFitz/polyprism.git",
-    "directory": "packages/ts-type"
+    "directory": "packages/ts-domain-class"
   },
   "bugs": {
     "url": "https://github.com/TravFitz/polyprism/issues"
   },
   "bin": {
-    "polyprism-ts-type": "./dist/generator.js"
+    "polyprism-ts-domain-class": "./dist/generator.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -41,7 +41,8 @@
     "prisma-generator",
     "prisma-7",
     "typescript",
-    "type-alias",
+    "domain-class",
+    "domain-driven-design",
     "codegen",
     "esm",
     "polyprism"
@@ -55,5 +56,9 @@
   "dependencies": {
     "@polyprism/core": "workspace:*",
     "@polyprism/ts-shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@polyprism/runtime": "workspace:*",
+    "@prisma/client": "^6.19.3"
   }
 }
