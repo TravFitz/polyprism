@@ -30,7 +30,7 @@
     "ci": "biome ci .",
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm install --lockfile-only",
-    "release": "pnpm build && changeset publish"
+    "release": "node scripts/guard-release.mjs && pnpm build && changeset publish"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",
