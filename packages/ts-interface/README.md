@@ -88,8 +88,8 @@ All annotations live in Prisma triple-slash doc comments (`///`):
 | `@json(Type)` | Brand a `Json` field with a TypeScript type. Four forms: bare, with-import, inline-anonymous, inline-named. |
 | `@type(MyType from "./path")` | Override the inferred TS type entirely. |
 | `@name(NewIdent)` | Rename the emitted identifier (escapes global casing). |
-| `@normalise(...)` | Parsed today; activates with `ts-domain-class` (v0.3 roadmap). |
-| `@coerce(...)` | Parsed today; activates with `ts-domain-class` (v0.3 roadmap). |
+| `@normalise(...)` | Parsed across all patterns; runtime behaviour fires only in [`@polyprism/ts-domain-class`](https://www.npmjs.com/package/@polyprism/ts-domain-class) (trim / lowercase / uppercase / nullEmptyToNull on setter assignment). |
+| `@coerce(...)` / `@noCoerce` | Parsed across all patterns; runtime behaviour fires only in [`@polyprism/ts-domain-class`](https://www.npmjs.com/package/@polyprism/ts-domain-class) (Int/Float/Decimal/BigInt/DateTime coerce-by-default; opt out per-field). |
 
 Full grammar in the [root README](https://github.com/TravFitz/polyprism#annotation-reference).
 
@@ -99,8 +99,9 @@ Same schema, different output shape — just swap the provider:
 
 - [`@polyprism/ts-type`](https://www.npmjs.com/package/@polyprism/ts-type) — `export type User = { ... };`
 - [`@polyprism/ts-class`](https://www.npmjs.com/package/@polyprism/ts-class) — `export class User { ... }` with real initializer expressions
+- [`@polyprism/ts-domain-class`](https://www.npmjs.com/package/@polyprism/ts-domain-class) — opinionated domain class with getters/setters, `@normalise`/`@coerce` data laundering, `from()`, `toJSON()`, and a fluent builder
 
-More patterns on the roadmap: domain class with getters/setters, Zod, Valibot, ArkType, TypeBox.
+More patterns on the roadmap: Zod, Valibot, ArkType, TypeBox.
 
 ## License
 

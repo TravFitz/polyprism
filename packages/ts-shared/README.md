@@ -1,6 +1,6 @@
 # @polyprism/ts-shared
 
-TypeScript rendering primitives shared by every `ts-*` pattern in [PolyPrism](https://github.com/TravFitz/polyprism) — a Prisma 6 & 7 generator that emits TypeScript types from your `schema.prisma` in whichever shape fits the layer you're writing: `interface`, `type`, or `class`.
+TypeScript rendering primitives shared by every `ts-*` pattern in [PolyPrism](https://github.com/TravFitz/polyprism) — a Prisma 6 & 7 generator that emits TypeScript types from your `schema.prisma` in whichever shape fits the layer you're writing: `interface`, `type`, plain `class`, or an opinionated `domain class` with setter-driven `@normalise`/`@coerce` data laundering.
 
 **Pure ESM, Prisma 7-native, zero third-party runtime dependencies on any published `@polyprism/*` package.**
 
@@ -12,7 +12,8 @@ You don't install `@polyprism/ts-shared` directly — each `ts-*` pattern packag
 |---|---|
 | [`@polyprism/ts-interface`](https://www.npmjs.com/package/@polyprism/ts-interface) | `export interface User { ... }` |
 | [`@polyprism/ts-type`](https://www.npmjs.com/package/@polyprism/ts-type) | `export type User = { ... };` |
-| [`@polyprism/ts-class`](https://www.npmjs.com/package/@polyprism/ts-class) | `export class User { ... }` |
+| [`@polyprism/ts-class`](https://www.npmjs.com/package/@polyprism/ts-class) | `export class User { ... }` — plain class, public fields |
+| [`@polyprism/ts-domain-class`](https://www.npmjs.com/package/@polyprism/ts-domain-class) | Opinionated domain class — private fields, getters/setters with `@normalise`/`@coerce` data laundering, `from()`, `toJSON()`, builder |
 
 ## What lives here
 

@@ -116,14 +116,28 @@ Every enum is **also** emitted as its own standalone ESM file at `<output>/enums
 
 Identical across all `ts-*` patterns — see the [root README](https://github.com/TravFitz/polyprism) for the full config reference and annotation grammar.
 
+## When `ts-class` isn't enough
+
+This package is the **plain-class** pattern — public fields, no behaviour, no data laundering. Use it when you want the conciseness of a class shape without ceremony, and you're happy assigning fields directly.
+
+If you need any of:
+
+- **Setter-driven data normalisation** (trim, lowercase, uppercase, nullEmptyToNull on assignment)
+- **Setter-driven type coercion** (`"5"` → `5` on Int, `"10.99"` → `Decimal(10.99)` on Decimal, etc.)
+- **Private fields with controlled accessors** instead of public-field assignment
+- **Fluent builder** (`User.builder().email("...").build()`)
+- **`User.from(data)` static factory** for hydrating untrusted shapes (HTTP bodies, Prisma rows)
+- **`toJSON()` that handles BigInt** without throwing
+
+...reach for [`@polyprism/ts-domain-class`](https://www.npmjs.com/package/@polyprism/ts-domain-class) instead. Same schema, same annotations — domain-class activates `@normalise` and `@coerce` semantics at runtime via emitted setters.
+
 ## Sibling patterns
 
 Same schema, different output shape — just swap the provider:
 
 - [`@polyprism/ts-interface`](https://www.npmjs.com/package/@polyprism/ts-interface) — `export interface User { ... }`
 - [`@polyprism/ts-type`](https://www.npmjs.com/package/@polyprism/ts-type) — `export type User = { ... };`
-
-A richer domain-class pattern (private fields, getters/setters, validation via `@normalise` / `@coerce`) is planned for v0.3.
+- [`@polyprism/ts-domain-class`](https://www.npmjs.com/package/@polyprism/ts-domain-class) — opinionated domain class with getters/setters, `@normalise`/`@coerce` data laundering, `from()`, `toJSON()`, and a fluent builder
 
 ## License
 

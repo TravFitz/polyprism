@@ -85,8 +85,9 @@ Same schema, different output shape — just swap the provider:
 
 - [`@polyprism/ts-interface`](https://www.npmjs.com/package/@polyprism/ts-interface) — `export interface User { ... }`
 - [`@polyprism/ts-class`](https://www.npmjs.com/package/@polyprism/ts-class) — `export class User { ... }` with real initializer expressions
+- [`@polyprism/ts-domain-class`](https://www.npmjs.com/package/@polyprism/ts-domain-class) — opinionated domain class with getters/setters, `@normalise`/`@coerce` data laundering, `from()`, `toJSON()`, and a fluent builder
 
-More patterns on the roadmap: domain class with getters/setters, Zod, Valibot, ArkType, TypeBox.
+More patterns on the roadmap: Zod, Valibot, ArkType, TypeBox.
 
 ## License
 

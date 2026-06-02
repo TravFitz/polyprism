@@ -1,6 +1,6 @@
 # @polyprism/core
 
-Internal runtime + IR layer behind [PolyPrism](https://github.com/TravFitz/polyprism) — a Prisma 6 & 7 generator that emits TypeScript types from your `schema.prisma` in whichever shape fits the layer you're writing: `interface`, `type`, or `class` today, with Zod / Valibot / ArkType / TypeBox on the roadmap.
+Internal runtime + IR layer behind [PolyPrism](https://github.com/TravFitz/polyprism) — a Prisma 6 & 7 generator that emits TypeScript types from your `schema.prisma` in whichever shape fits the layer you're writing: `interface`, `type`, plain `class`, or an opinionated `domain class` with setter-driven `@normalise`/`@coerce` data laundering today, with Zod / Valibot / ArkType / TypeBox on the roadmap.
 
 > One Prisma schema. Many shapes. Pick your output by changing a single config string.
 
@@ -14,7 +14,8 @@ You don't install `@polyprism/core` directly — each pattern package pulls it i
 |---|---|
 | [`@polyprism/ts-interface`](https://www.npmjs.com/package/@polyprism/ts-interface) | `export interface User { ... }` |
 | [`@polyprism/ts-type`](https://www.npmjs.com/package/@polyprism/ts-type) | `export type User = { ... };` |
-| [`@polyprism/ts-class`](https://www.npmjs.com/package/@polyprism/ts-class) | `export class User { ... }` |
+| [`@polyprism/ts-class`](https://www.npmjs.com/package/@polyprism/ts-class) | `export class User { ... }` — plain class, public fields |
+| [`@polyprism/ts-domain-class`](https://www.npmjs.com/package/@polyprism/ts-domain-class) | Opinionated domain class — private fields, getters/setters with `@normalise`/`@coerce` data laundering, `from()`, `toJSON()`, builder |
 
 ## What `@polyprism/core` actually does
 

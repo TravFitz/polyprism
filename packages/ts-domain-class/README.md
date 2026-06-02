@@ -5,7 +5,7 @@ A Prisma 6 & 7 generator that emits opinionated TypeScript **domain classes** fr
 ```ts
 const order = new Order({
   customerId: "cus_123",
-  total: "10.99",         // string from Shopify API → coerced to Decimal
+  total: "10.99",         // stringified money from an HTTP API → coerced to Decimal
   placedAt: "2026-06-02", // ISO string → coerced to Date
 });
 
