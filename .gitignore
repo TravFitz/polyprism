@@ -29,3 +29,9 @@ AGENTS.md
 .env.*.local
 
 .pnpm-store/
+
+# Local-only helper scripts — useful tools that aren't load-bearing for
+# the published packages and don't belong in the public repo. Living
+# inside `scripts/` so they sit next to `guard-release.mjs` where you'd
+# look for them, but tracked locally only.
+scripts/npm-download-stats.mjs
