@@ -5,12 +5,12 @@
 
 PolyPrism is a [Prisma](https://www.prisma.io) generator that emits
 TypeScript types from your `schema.prisma` in whichever shape fits the layer
-you're writing: interface, type alias, or plain class today — domain class
-with getters/setters, Zod, Valibot, ArkType, and TypeBox on the roadmap.
+you're writing: interface, type alias, plain class, or domain class with
+getters/setters today — Zod, Valibot, ArkType, and TypeBox on the roadmap.
 
 ```prisma
 generator polyprismCodegen {
-  provider = "polyprism-ts-interface"  // or ts-type / ts-class
+  provider = "polyprism-ts-interface"  // or ts-type / ts-class / ts-domain-class
   output   = "../generated"
 }
 ```
@@ -36,10 +36,15 @@ PolyPrism takes a different shape:
   from a CJS codebase. Works with both Prisma 6 and Prisma 7; CI tests
   both. Example fixtures use the modern Prisma 7 schema layout (`url` in
   `prisma.config.ts`).
-- **Zero third-party runtime dependencies on published packages.** Each
-  `@polyprism/*` pattern package depends only on `@polyprism/core`, which in
-  turn has no third-party runtime deps. The generated code imports nothing
-  from PolyPrism. Drop the generator and your output keeps compiling.
+- **Zero third-party runtime dependencies across the whole `@polyprism/*`
+  family.** No lodash, no shipped Prisma helpers, no surprise transitive
+  bloat. Three of the four pattern packages (`ts-interface`, `ts-type`,
+  `ts-class`) emit code that imports nothing from PolyPrism at all — drop
+  the generator and the output keeps compiling. The fourth,
+  `ts-domain-class`, opts you into one PolyPrism-internal runtime dep
+  (`@polyprism/runtime`, ~70 LOC, zero third-party deps) in exchange for
+  setter-driven `@normalise` / `@coerce` data laundering, `from()`,
+  `toJSON()`, and a fluent builder. The trade is per-pattern and per-user.
 
 It's a generator I wanted for my own work and couldn't find off the shelf —
 if any of the above lines up with what you're after, give it a spin.
@@ -55,7 +60,7 @@ if any of the above lines up with what you're after, give it a spin.
 - **`@db.X(p, s)` precision** captured as JSDoc so the schema-level info isn't lost.
 - **Optional barrel** (`emitIndex = true`) with class-mode awareness (`export { User }` vs. `export type { User }` based on the pattern).
 - **Pretty-formatted inline JSON types** — multi-property objects emitted from `@json({ ... })` are broken onto multiple lines for readability instead of collapsed onto one.
-- **Zero third-party runtime dependencies** on any published `@polyprism/*` package.
+- **Zero third-party runtime dependencies** on any published `@polyprism/*` package. `ts-domain-class` consumers gain one PolyPrism-internal dep (`@polyprism/runtime`); everyone else: nothing.
 
 ## Quick start
 
@@ -114,7 +119,7 @@ export interface User {
 }
 ```
 
-## The three patterns, side-by-side
+## The four patterns, side-by-side
 
 Same model. Swap the provider. That's it.
 
@@ -122,7 +127,6 @@ Same model. Swap the provider. That's it.
 <tr>
 <th align="left"><code>polyprism-ts-interface</code></th>
 <th align="left"><code>polyprism-ts-type</code></th>
-<th align="left"><code>polyprism-ts-class</code></th>
 </tr>
 <tr>
 <td>
@@ -149,6 +153,12 @@ export type User = {
 ```
 
 </td>
+</tr>
+<tr>
+<th align="left"><code>polyprism-ts-class</code></th>
+<th align="left"><code>polyprism-ts-domain-class</code></th>
+</tr>
+<tr>
 <td>
 
 ```ts
@@ -163,12 +173,53 @@ export class User {
 ```
 
 </td>
+<td>
+
+```ts
+import { normalise } from "@polyprism/runtime";
+import { Role } from "./enums/Role.js";
+
+export interface UserInit {
+  email: string;          // @normalise(trim, lowercase)
+  name?: string | null;
+  role?: Role;
+}
+
+export class User {
+  #email!: string;
+  #name: string | null = null;
+  #role!: Role;
+
+  get email(): string { return this.#email; }
+  set email(v: string) {
+    this.#email = normalise(v, ["trim","lowercase"] as const);
+  }
+
+  // ...getters/setters per field,
+  //    builder(), from(), and a
+  //    toJSON() override for models
+  //    that include BigInt fields.
+}
+```
+
+</td>
 </tr>
 </table>
 
-Class mode emits real initializer expressions so you can `new User()` and
+`ts-class` emits real initializer expressions so you can `new User()` and
 trust the defaults — Prisma-managed values (cuid/uuid/now/autoincrement) keep
 the `!` definite-assignment marker because Prisma assigns them at insert time.
+
+`ts-domain-class` goes a step further: private fields with getter/setter
+accessors that run `@normalise` and `@coerce` on assignment, plus a coerce-by-default
+policy on `Int` / `Float` / `Decimal` / `BigInt` / `DateTime` so stringified
+primitives from JSON bodies, GraphQL responses, and form data get laundered
+into the right shape on the way in. `Object.keys(user)` returns the field
+names via per-instance enumerable accessors, so `prisma.user.update({ data:
+user })` round-trips natively — no `toData()` ceremony. The opinionated
+pattern; the trade for setter-driven type safety is one PolyPrism-internal
+runtime dep (`@polyprism/runtime`). The other three patterns stay
+runtime-dep-free.
 
 ## Annotation reference
 
@@ -181,8 +232,9 @@ All annotations live in Prisma triple-slash doc comments (`///`).
 | `@json(Type)` | Brand a `Json` field with a TypeScript type. See [4 forms](#json-annotation--four-forms) below. |
 | `@type(MyType from "./path")` | Override the inferred TS type. The `from "./path"` half is optional. |
 | `@name(NewIdent)` | Rename the emitted identifier for a model/enum/field (escapes global casing). |
-| `@normalise(trim, lowercase, ...)` | Parsed in v0.1, used by `ts-domain-class` (v0.3). |
-| `@coerce(date \| int \| ...)` | Parsed in v0.1, used by `ts-domain-class` (v0.3). |
+| `@normalise(trim, lowercase, uppercase, nullEmptyToNull)` | Apply string-normalisation ops on assignment (`ts-domain-class` only). Parsed but ignored by the other three patterns. |
+| `@coerce(target)` | Override the default coercion for a field (`ts-domain-class` only — `String @coerce(int)` etc). |
+| `@noCoerce` | Opt a default-coerce field (`Int`, `Float`, `Decimal`, `BigInt`, `DateTime`) out of widened setter input on `ts-domain-class`. |
 
 ### `@json` annotation — four forms
 
@@ -246,7 +298,7 @@ global rule for that one identifier.
 
 ## Examples
 
-Three example schemas live in `examples/` — each picks a different pattern
+Four example schemas live in `examples/` — each picks a different pattern
 and a different complexity tier:
 
 - **[`examples/simple-blog/`](examples/simple-blog)** — minimal, zero
@@ -262,16 +314,23 @@ and a different complexity tier:
   sink using `ts-interface`. Every scalar type, all 4 `@json` forms, `@hide`,
   `@deprecated`, `@name` override, self-referential relations, composite
   unique indexes, `@db.*` native types.
+- **[`examples/domain-class-showcase/`](examples/domain-class-showcase)** —
+  billing/orders schema using `ts-domain-class`. Exercises every default-coerce
+  type, every `@normalise` op, `@noCoerce`, `@coerce(target)`, inline `@json`,
+  relations (1-to-1, 1-to-many, self-reference), and the `Init`-interface
+  required-vs-optional split. The generated output is committed to git so
+  you can diff schema changes against emitted code without running the
+  generator yourself.
 
 ## Roadmap
 
-| Version | Adds |
-|---|---|
-| **0.1** (now) | `ts-interface`, `ts-type`, `ts-class`, **`ts-domain-class`** (with setter-driven `@normalise`/`@coerce`, `from()`, `toJSON()`, fluent builder), `runtime` helpers, 8 annotations, three-axis naming, enum + JSON-type file emission |
-| 0.2 | Polish: error messages with schema line numbers, JSDoc emission from Prisma `///` comments on models, richer README |
-| 0.3 | `ts-zod` — Zod schema emission, sharing the same naming and annotation pipeline as the type-shape patterns |
-| 1.0 | Docs site, JSON-Schema-validated config, public stability commitment on the emitter API |
-| Later | `ts-valibot`, `ts-arktype`, `ts-typebox`, `ts-effect-schema`, `ts-standard-schema`, PHP emitter family |
+| Version | State | Adds |
+|---|---|---|
+| **0.1** | shipped | `ts-interface`, `ts-type`, `ts-class`, **`ts-domain-class`** (with setter-driven `@normalise`/`@coerce`, `from()`, `toJSON()`, fluent builder), `@polyprism/runtime` helpers, 8 annotations, three-axis naming, enum + JSON-type file emission |
+| 0.2 | next | Polish: error messages with schema line numbers, additional small hardening passes as they surface |
+| 0.3 | planned | `ts-zod` — Zod schema emission, sharing the same naming and annotation pipeline as the type-shape patterns |
+| 1.0 | planned | Docs site, JSON-Schema-validated config, public stability commitment on the emitter API |
+| Later | — | `ts-valibot`, `ts-arktype`, `ts-typebox`, `ts-effect-schema`, `ts-standard-schema`, PHP emitter family |
 
 ## Contributing
 

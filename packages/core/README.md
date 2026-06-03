@@ -32,7 +32,7 @@ It's the brain every pattern package shares:
 
 Two reasons:
 
-1. **Pattern packages stay tiny.** Each `@polyprism/ts-*` package ships only its emitter and depends on `@polyprism/core` — nothing else. The *generated* code imports nothing from PolyPrism either, so you can drop the generator entirely and your output keeps compiling.
+1. **Pattern packages stay tiny.** Each `@polyprism/ts-*` package ships only its emitter and depends on `@polyprism/core` (plus `@polyprism/ts-shared` for the TS family) — nothing else. For `ts-interface`, `ts-type`, and `ts-class`, the *generated* code imports nothing from PolyPrism either, so you can drop the generator and your output keeps compiling. `ts-domain-class` is the one exception: it emits imports from [`@polyprism/runtime`](https://www.npmjs.com/package/@polyprism/runtime) — a ~70 LOC, zero-third-party-dep runtime helper — in exchange for setter-driven `@normalise` / `@coerce` data laundering.
 2. **One brain, many emitters.** Every pattern reads the same IR, so the `interface` version and the `class` version of your schema agree on field names, file layout, JSON-type handling, and annotation behaviour — by construction, not by convention.
 
 ## Links
