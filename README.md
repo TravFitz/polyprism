@@ -304,6 +304,17 @@ and `Generated\Enums`; wire it into `composer.json` autoload:
 }
 ```
 
+**Supported PHP versions**
+
+| Package | Min PHP | What drives the floor |
+|---|---|---|
+| `@polyprism/php-class` | **8.1** | Backed enums (`enum X: string`), `new \DateTimeImmutable()` in default param values (the "new in initializers" RFC), enum-case defaults (`Role::MEMBER`), the `mixed` type, constructor property promotion |
+| `@polyprism/php-readonly` | **8.2** | Everything above plus the class-level `readonly` modifier (per-property `readonly` exists in 8.1, but `final readonly class` is 8.2) |
+
+No upper limit — emitted code is forward-compatible through PHP 8.3, 8.4 (deprecates optional-before-required, which we already sort around), and the planned 9.0. PHP 8.1 entered security-only support in late 2024 and ended security support 2025-12; we still target it as the floor because much of the active Composer ecosystem hasn't yet moved.
+
+**Verified Composer-compliant.** The committed showcase output passes `composer dump-autoload --strict-psr` with zero warnings, and is exercised end-to-end through Composer's PSR-4 autoloader (instantiating every generated class, including `final readonly` enforcement, `@hide` field omission, and `json_encode` round-trip) before each release. The same check runs in CI.
+
 PHP scalar mapping: `String → string`, `Int → int`, `Float → float`,
 `Boolean → bool`, `DateTime → \DateTimeImmutable`, `BigInt → int`
 (PHP `int` is 64-bit on every modern target — set `@type("string", ...)`

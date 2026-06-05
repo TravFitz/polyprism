@@ -189,3 +189,25 @@ jobs:
           echo "::group::Drift check (regenerated output must match committed)"
           git diff --exit-code examples/php-class-showcase/generated
           echo "::endgroup::"
+
+      # PSR-4 compliance: drop the showcase generated/ into a throwaway
+      # composer project and run `composer dump-autoload --strict-psr`.
+      # With --strict-psr, Composer exits non-zero on any file whose class
+      # name doesn't match its file name (case-sensitive) or whose namespace
+      # doesn't match the directory path. Catches "PHP parses but Composer
+      # can't autoload it" — a real class of bug that `php -l` alone misses.
+      - name: Verify generated PHP is Composer-strict-PSR-4 compliant
+        run: |
+          set -e
+          tmp="$(mktemp -d)"
+          cp -r examples/php-class-showcase/generated "$tmp/src"
+          cat > "$tmp/composer.json" <<'JSON'
+          {
+              "name": "polyprism/ci-compliance-check",
+              "type": "library",
+              "require": { "php": ">=8.2" },
+              "autoload": { "psr-4": { "Generated\\": "src/" } }
+          }
+          JSON
+          cd "$tmp"
+          composer dump-autoload --strict-psr --optimize

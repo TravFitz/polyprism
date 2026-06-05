@@ -29,6 +29,16 @@ Both build on a new `@polyprism/php-shared` rendering layer, mirroring how the T
 - Constructor parameters are sorted required-first, optional-second — PHP 8.4-deprecation safe.
 - Annotation support: `@hide`, `@deprecated`, `@name`, `@type`. `@coerce`/`@normalise`/`@noCoerce` are recognised but ignored in v0 (deferred to a future `@polyprism/php-domain-class` with PHP 8.4 property hooks).
 
-The packages emit under `<outputDir>/Models/<ClassName>.php` and `<outputDir>/Enums/<EnumName>.php`. Consumers wire the generated dir into `composer.json` autoload with a single psr-4 entry (default root namespace: `Generated\\`).
+**Typed JSON columns** via `@json(...)`:
+
+- Inline-named (`/// @json(BillingAddress = { street: string, city: string })`) and inline-anonymous (`/// @json({ ... })`) forms emit a `final readonly class` under `<outputDir>/JsonTypes/<Name>.php`. The Json field on the parent model is typed as that class (with a `use` statement registered cross-namespace).
+- Supported v0 TS subset inside `@json` shapes: primitives (`string`, `number → float`, `boolean`, `unknown`/`any → mixed`), optional fields (`name?: type`), arrays of primitives (`tags: string[]` → PHP `array` + PHPDoc `array<int, T>`), and nested objects (PHPDoc `array{...}` shape on a plain `array` property — no sub-class spawning).
+- Unsupported shapes (unions, generics, identifier references inside an inline shape) warn + fall back to `mixed`. Use `@type("\\App\\YourType")` to point at a hand-written PHP class for richer typing.
+- Bare (`@json(SomeType)`) and with-path (`@json(SomeType from "./path")`) forms warn + fall back to `mixed` — these rely on TS module imports with no PHP autoloading equivalent.
+- Auto-naming collisions (two different shapes resolving to the same class name) emit a warning identifying both source fields.
+
+**Verified Composer-compliant.** The committed showcase output passes `composer dump-autoload --strict-psr` with zero warnings, parses cleanly under `php -l` 8.2, and is exercised end-to-end via Composer's PSR-4 autoloader (instantiating every generated class, including `final readonly` enforcement, `@hide` field omission, and `json_encode` round-trip). The same `php -l` + `--strict-psr` checks run in CI on every push.
+
+The packages emit under `<outputDir>/Models/<ClassName>.php`, `<outputDir>/Enums/<EnumName>.php`, and `<outputDir>/JsonTypes/<Name>.php`. Consumers wire the generated dir into `composer.json` autoload with a single psr-4 entry (default root namespace: `Generated\\`).
 
 This release is a coordinated minor across the @polyprism/* fixed-version group; non-PHP packages contain no functional changes.
