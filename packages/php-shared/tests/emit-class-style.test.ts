@@ -168,7 +168,13 @@ describe("php-class — class structure", () => {
 });
 
 describe("php-class — scalar type mapping", () => {
-  const cases: Array<[string, "String" | "Int" | "Float" | "Boolean" | "BigInt" | "Decimal" | "DateTime" | "Json" | "Bytes", string]> = [
+  const cases: Array<
+    [
+      string,
+      "String" | "Int" | "Float" | "Boolean" | "BigInt" | "Decimal" | "DateTime" | "Json" | "Bytes",
+      string,
+    ]
+  > = [
     ["String → string", "String", "public string $f"],
     ["Int → int", "Int", "public int $f"],
     ["Float → float", "Float", "public float $f"],
@@ -340,7 +346,10 @@ describe("php-class — defaults", () => {
       model("M", [
         field("count", scalar("Int"), { hasDefaultValue: true, default: litInt(42) }),
         field("ratio", scalar("Float"), { hasDefaultValue: true, default: litInt(0) }),
-        field("pi", scalar("Float"), { hasDefaultValue: true, default: { kind: "literal", value: 3.14 } }),
+        field("pi", scalar("Float"), {
+          hasDefaultValue: true,
+          default: { kind: "literal", value: 3.14 },
+        }),
       ]),
     ]);
     await emitPhpModels(ctx, { declarationStyle: "class" });

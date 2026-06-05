@@ -30,12 +30,7 @@
 //     already produces the right shape for public-property classes; the
 //     opaque-property cases live in php-domain-class anyway.
 
-import type {
-  FieldDef,
-  ModelDef,
-  PolyPrismConfig,
-  PolyPrismIR,
-} from "@polyprism/core";
+import type { FieldDef, ModelDef, PolyPrismConfig, PolyPrismIR } from "@polyprism/core";
 import { resolveFieldIdent, resolveTypeIdent } from "@polyprism/core";
 
 import type { Diagnostic } from "./diagnostics.js";
@@ -143,9 +138,10 @@ export function renderPhpModel(opts: RenderPhpModelOptions): RenderPhpModelResul
     // class. We pick class-level for the "readonly" style — single source
     // of truth, less line noise — so the per-property emit is identical
     // between the two styles.
-    const propLine = defaultExpr === null
-      ? `        public ${mapping.signatureType} $${fieldIdent}`
-      : `        public ${mapping.signatureType} $${fieldIdent} = ${defaultExpr}`;
+    const propLine =
+      defaultExpr === null
+        ? `        public ${mapping.signatureType} $${fieldIdent}`
+        : `        public ${mapping.signatureType} $${fieldIdent} = ${defaultExpr}`;
     entries.push({ line: `${propertyDoc}${propLine},`, hasDefault: defaultExpr !== null });
   }
 
@@ -161,8 +157,7 @@ export function renderPhpModel(opts: RenderPhpModelOptions): RenderPhpModelResul
   // Promoted properties go between the constructor parens. Even with no
   // visible fields PHP wants a balanced `()` — `final class { __construct() {} }`
   // is valid but useless.
-  const promotedBlock =
-    promotedLines.length > 0 ? `\n${promotedLines.join("\n")}\n    ` : "";
+  const promotedBlock = promotedLines.length > 0 ? `\n${promotedLines.join("\n")}\n    ` : "";
 
   const usesBlock = uses.render();
   const headerDoc = renderPhpDoc(model.annotations, { indent: 0 });
@@ -176,7 +171,8 @@ export function renderPhpModel(opts: RenderPhpModelOptions): RenderPhpModelResul
     "",
     `namespace ${modelsNamespace};`,
     "",
-    usesBlock + `${headerDoc}${classKeywords} ${selfIdent}\n{\n    public function __construct(${promotedBlock}) {}\n}`,
+    usesBlock +
+      `${headerDoc}${classKeywords} ${selfIdent}\n{\n    public function __construct(${promotedBlock}) {}\n}`,
     "",
   ].join("\n");
 
