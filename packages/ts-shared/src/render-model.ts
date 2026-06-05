@@ -25,6 +25,7 @@ import type {
 } from "@polyprism/core";
 import { resolveFieldIdent, resolveTypeFilename, resolveTypeIdent } from "@polyprism/core";
 
+import type { Diagnostic } from "./diagnostics.js";
 import { ImportCollector } from "./imports.js";
 import { renderJsDoc } from "./jsdoc.js";
 import { renderDomainClass } from "./render-domain-class.js";
@@ -39,16 +40,37 @@ export interface RenderModelOptions {
   readonly declarationStyle: DeclarationStyle;
 }
 
-export function renderModel(opts: RenderModelOptions): string {
+export interface RenderModelResult {
+  readonly source: string;
+  /**
+   * Emit-time issues surfaced while rendering this model — currently only
+   * populated by the domain-class path (via coerce-rules.ts). The flat
+   * styles (interface / type / class) don't generate any of their own
+   * issues today, so this is always [] for them.
+   */
+  readonly issues: readonly Diagnostic[];
+}
+
+export function renderModel(opts: RenderModelOptions): RenderModelResult {
   // Domain-class output is too divergent to share the field-by-field loop
   // below — the constructor + private-field + per-instance defineProperty
-  // layout is rendered end-to-end by render-domain-class.ts. Issues
-  // surfaced by the coerce-rules validator are currently dropped here for
-  // string-output compatibility; emit-models will route them through a
-  // proper logger once issue reporting lands as a follow-up.
+  // layout is rendered end-to-end by render-domain-class.ts. Its
+  // CoerceRulesIssues are mapped to Diagnostics here so emit-models can
+  // report them through a single channel alongside parser issues.
   if (opts.declarationStyle === "domain-class") {
-    const { source } = renderDomainClass({ model: opts.model, ir: opts.ir, config: opts.config });
-    return source;
+    const { source, issues } = renderDomainClass({
+      model: opts.model,
+      ir: opts.ir,
+      config: opts.config,
+    });
+    return {
+      source,
+      issues: issues.map((issue) => ({
+        severity: issue.severity,
+        context: issue.fieldPath,
+        message: issue.message,
+      })),
+    };
   }
 
   const { model, ir, config, declarationStyle } = opts;
@@ -118,14 +140,26 @@ export function renderModel(opts: RenderModelOptions): string {
   const importBlock = imports.render();
   const body = fieldLines.length > 0 ? `\n${fieldLines.join("\n")}\n` : "\n";
 
+  let source: string;
   switch (declarationStyle) {
     case "interface":
-      return `${importBlock}${headerDoc}export interface ${selfIdent} {${body}}\n`;
+      source = `${importBlock}${headerDoc}export interface ${selfIdent} {${body}}\n`;
+      break;
     case "type":
-      return `${importBlock}${headerDoc}export type ${selfIdent} = {${body}};\n`;
+      source = `${importBlock}${headerDoc}export type ${selfIdent} = {${body}};\n`;
+      break;
     case "class":
-      return `${importBlock}${headerDoc}export class ${selfIdent} {${body}}\n`;
+      source = `${importBlock}${headerDoc}export class ${selfIdent} {${body}}\n`;
+      break;
+    default: {
+      // `domain-class` is handled by the early return above; any future
+      // DeclarationStyle additions land here and surface as a compile error
+      // until they grow a real case.
+      const _exhaustive: never = declarationStyle;
+      throw new Error(`unhandled DeclarationStyle: ${_exhaustive as string}`);
+    }
   }
+  return { source, issues: [] };
 }
 
 interface ClassRenderCtx {

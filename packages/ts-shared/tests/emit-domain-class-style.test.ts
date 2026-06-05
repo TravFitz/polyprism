@@ -670,43 +670,51 @@ describe('declarationStyle: "domain-class" — nullable + default truth gap', ()
 
 describe('declarationStyle: "domain-class" — reserved-name collision', () => {
   it("rejects a field whose ident is 'constructor' (would break instance.constructor reflection)", async () => {
-    // We call emitModels directly so we can capture issues from the renderer.
-    // The integration is via the file writer; if a field is rejected, it
-    // simply isn't emitted into the class body. The emit-time error issue is
-    // observable via the issue collector — but emitModels currently doesn't
-    // expose those. So we assert via the negative: the rejected field must
-    // not appear in the output, and any other fields in the model are emitted
-    // normally.
-    const { ctx, writer } = makeContext([
+    // The renderer drops the offending field from the class body AND records
+    // an error-severity Diagnostic with `Model.field` context. With the v0.2
+    // diagnostic surface (onDiagnostic + throw-on-error), emitModels throws
+    // at the end — silently dropping the field while pretending the build
+    // succeeded was the old footgun. Tests now assert on both the
+    // diagnostic and the throw.
+    const { ctx } = makeContext([
       model("Conflict", [
         field("id", scalar("String"), { hasDefaultValue: true, default: cuidDefault() }),
         field("constructor", scalar("String")),
         field("name", scalar("String")),
       ]),
     ]);
-    await emitModels(ctx, { declarationStyle: "domain-class" });
-    const out = writer.files.get("Conflict.ts")!;
-    // The non-conflicting fields are emitted as normal
-    expect(out).toContain("#name!: string;");
-    expect(out).toContain("get name(): string {");
-    // The conflicting field must NOT appear in the class body OR the init shape
-    expect(out).not.toContain("#constructor");
-    expect(out).not.toContain("get constructor(");
-    expect(out).not.toContain("set constructor(");
-    expect(out).not.toContain("constructor: string");
+    const diagnostics: Array<{ severity: string; context: string; message: string }> = [];
+    await expect(
+      emitModels(ctx, {
+        declarationStyle: "domain-class",
+        onDiagnostic: (d) => diagnostics.push(d),
+      }),
+    ).rejects.toThrow(/error-severity diagnostic/);
+
+    const issue = diagnostics.find((d) => d.context === "Conflict.constructor");
+    expect(issue).toBeDefined();
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("collides with a built-in prototype property");
   });
 
   it("rejects a field whose ident is '__proto__' (descriptor is inherited, not own — Prisma would never see it)", async () => {
-    const { ctx, writer } = makeContext([
+    const { ctx } = makeContext([
       model("Conflict", [
         field("id", scalar("String"), { hasDefaultValue: true, default: cuidDefault() }),
         field("__proto__", scalar("String")),
       ]),
     ]);
-    await emitModels(ctx, { declarationStyle: "domain-class" });
-    const out = writer.files.get("Conflict.ts")!;
-    expect(out).not.toContain("#__proto__");
-    expect(out).not.toContain("__proto__:");
+    const diagnostics: Array<{ severity: string; context: string; message: string }> = [];
+    await expect(
+      emitModels(ctx, {
+        declarationStyle: "domain-class",
+        onDiagnostic: (d) => diagnostics.push(d),
+      }),
+    ).rejects.toThrow(/error-severity diagnostic/);
+
+    const issue = diagnostics.find((d) => d.context === "Conflict.__proto__");
+    expect(issue).toBeDefined();
+    expect(issue?.severity).toBe("error");
   });
 });
 

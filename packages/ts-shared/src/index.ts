@@ -1,3 +1,4 @@
+export * from "./diagnostics.js";
 export * from "./emit-models.js";
 export * from "./imports.js";
 export * from "./jsdoc.js";
