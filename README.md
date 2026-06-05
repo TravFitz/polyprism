@@ -3,14 +3,18 @@
 > One Prisma schema. Many shapes. Pick your output by changing a single
 > config string.
 
-PolyPrism is a [Prisma](https://www.prisma.io) generator that emits
-TypeScript types from your `schema.prisma` in whichever shape fits the layer
-you're writing: interface, type alias, plain class, or domain class with
-getters/setters today — Zod, Valibot, ArkType, and TypeBox on the roadmap.
+PolyPrism is a [Prisma](https://www.prisma.io) generator that emits typed
+code from your `schema.prisma` in whichever shape fits the layer you're
+writing: TypeScript interface, type alias, plain class, or domain class
+with getters/setters — and now PHP 8.1+ classes (mutable) or PHP 8.2+
+readonly value objects. Zod, Valibot, ArkType, and TypeBox on the roadmap.
 
 ```prisma
 generator polyprismCodegen {
+  // TypeScript family:
   provider = "polyprism-ts-interface"  // or ts-type / ts-class / ts-domain-class
+  // PHP family:
+  // provider = "polyprism-php-class"  // or php-readonly
   output   = "../generated"
 }
 ```
@@ -49,9 +53,11 @@ PolyPrism takes a different shape:
 It's a generator I wanted for my own work and couldn't find off the shelf —
 if any of the above lines up with what you're after, give it a spin.
 
-## Features (v0.1)
+## Features
 
-- **4 output patterns** today, more to come: `ts-interface`, `ts-type`, `ts-class`, `ts-domain-class` (opinionated class with setter-driven `@normalise` + `@coerce` data laundering, `from()`, `toJSON()`, and a fluent builder).
+- **6 output patterns** today, more to come:
+  - TypeScript: `ts-interface`, `ts-type`, `ts-class`, `ts-domain-class` (opinionated class with setter-driven `@normalise` + `@coerce` data laundering, `from()`, `toJSON()`, and a fluent builder).
+  - PHP: `php-class` (PHP 8.1+ `final class` with constructor property promotion), `php-readonly` (PHP 8.2+ `final readonly class` value objects).
 - **Always-on standalone enum files** — every Prisma enum is also written to its own importable file, so you can `Object.values(MyEnum)` directly without re-exporting from `@prisma/client` (whose CJS shape doesn't always play nicely with ESM consumers).
 - **8 doc-comment annotations**: `@hide`, `@deprecated`, `@json` (4 forms), `@type`, `@name`, `@normalise`, `@coerce`, `@noCoerce`.
 - **`prisma-json-types-generator` shorthand compatibility**: accepts `/// [TypeName]` as an alias for `@json(TypeName)`.
@@ -119,9 +125,11 @@ export interface User {
 }
 ```
 
-## The four patterns, side-by-side
+## The six patterns, side-by-side
 
 Same model. Swap the provider. That's it.
+
+### TypeScript family
 
 <table>
 <tr>
@@ -218,8 +226,103 @@ into the right shape on the way in. `Object.keys(user)` returns the field
 names via per-instance enumerable accessors, so `prisma.user.update({ data:
 user })` round-trips natively — no `toData()` ceremony. The opinionated
 pattern; the trade for setter-driven type safety is one PolyPrism-internal
-runtime dep (`@polyprism/runtime`). The other three patterns stay
+runtime dep (`@polyprism/runtime`). The other three TS patterns stay
 runtime-dep-free.
+
+### PHP family
+
+<table>
+<tr>
+<th align="left"><code>polyprism-php-class</code> (PHP 8.1+)</th>
+<th align="left"><code>polyprism-php-readonly</code> (PHP 8.2+)</th>
+</tr>
+<tr>
+<td>
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Generated\Models;
+
+use Generated\Enums\Role;
+
+final class User
+{
+    public function __construct(
+        public string $id,
+        public string $email,
+        public ?string $name = null,
+        public Role $role = Role::MEMBER,
+    ) {}
+}
+```
+
+</td>
+<td>
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Generated\Models;
+
+use Generated\Enums\Role;
+
+final readonly class User
+{
+    public function __construct(
+        public string $id,
+        public string $email,
+        public ?string $name = null,
+        public Role $role = Role::MEMBER,
+    ) {}
+}
+```
+
+</td>
+</tr>
+</table>
+
+Both PHP patterns use **constructor property promotion** — the canonical
+PHP 8 shorthand that declares properties and accepts constructor
+parameters in a single block. `php-class` is mutable (`$user->email = 'x'`
+works); `php-readonly` is immutable after construction and is the
+idiomatic shape for DTOs and value objects.
+
+Generated files land under `<outputDir>/Models/User.php` and
+`<outputDir>/Enums/Role.php`. The default namespace is `Generated\Models`
+and `Generated\Enums`; wire it into `composer.json` autoload:
+
+```json
+{
+  "autoload": {
+    "psr-4": { "Generated\\": "src/Generated/" }
+  }
+}
+```
+
+PHP scalar mapping: `String → string`, `Int → int`, `Float → float`,
+`Boolean → bool`, `DateTime → \DateTimeImmutable`, `BigInt → int`
+(PHP `int` is 64-bit on every modern target — set `@type("string", ...)`
+on a field if you need to round-trip values beyond `PHP_INT_MAX`),
+`Decimal → string` (use `brick/math` or BCMath at the consumer to
+operate on the values), `Json → mixed`, `Bytes → string`. Enums emit as
+PHP 8.1+ backed enums (`enum Role: string { case ADMIN = 'ADMIN'; }`).
+
+`@hide`, `@deprecated`, `@name`, and `@type` work the same way they do
+in the TypeScript family. `@coerce` / `@normalise` / `@noCoerce` are
+parsed but ignored in v0 — those are property-hook features that need
+PHP 8.4 and will ship as a future `@polyprism/php-domain-class`.
+
+Both PHP classes are emitted as `final`. That's deliberate: regenerated
+DTOs whose shape can change with the schema shouldn't be silently broken
+by hand-written subclasses. Use **composition over inheritance** for
+domain logic — wrap the generated class or pass it to a service. See
+[`@polyprism/php-class`'s README](packages/php-class/README.md#why-final)
+for the worked example.
 
 ## Annotation reference
 
@@ -298,7 +401,7 @@ global rule for that one identifier.
 
 ## Examples
 
-Four example schemas live in `examples/` — each picks a different pattern
+Five example schemas live in `examples/` — each picks a different pattern
 and a different complexity tier:
 
 - **[`examples/simple-blog/`](examples/simple-blog)** — minimal, zero
@@ -321,16 +424,23 @@ and a different complexity tier:
   required-vs-optional split. The generated output is committed to git so
   you can diff schema changes against emitted code without running the
   generator yourself.
+- **[`examples/php-class-showcase/`](examples/php-class-showcase)** —
+  billing/orders schema using `php-class`. Mirrors the domain-class shape
+  on the PHP side: every PHP scalar mapping, enums with defaults, 1-to-many
+  + self-referencing relations, every default kind (literal, enum case,
+  `now()`, unrepresentable `cuid()`), and the annotation set (`@hide`,
+  `@deprecated`, `@name`, `@type`, and the `@json` warning-and-fallback).
+  Generated output committed to git.
 
 ## Roadmap
 
 | Version | State | Adds |
 |---|---|---|
 | **0.1** | shipped | `ts-interface`, `ts-type`, `ts-class`, **`ts-domain-class`** (with setter-driven `@normalise`/`@coerce`, `from()`, `toJSON()`, fluent builder), `@polyprism/runtime` helpers, 8 annotations, three-axis naming, enum + JSON-type file emission |
-| 0.2 | next | Polish: error messages with schema line numbers, additional small hardening passes as they surface |
-| 0.3 | planned | `ts-zod` — Zod schema emission, sharing the same naming and annotation pipeline as the type-shape patterns |
+| **0.2** | next | **PHP emitter family** — `php-class` (PHP 8.1+) and `php-readonly` (PHP 8.2+). Constructor property promotion, PHP 8.1+ backed enums, PSR-4-compatible file layout. May be accompanied by diagnostic-surface polish on the TS family (emit-time issues flowing through a proper reporter) if that change lands in the same release window. |
+| 0.3 | planned | `ts-zod` — Zod schema emission, sharing the same naming and annotation pipeline as the type-shape patterns. Also: `php-domain-class` with PHP 8.4 property hooks + a Composer-published `polyprism/runtime` for setter-driven `@coerce`/`@normalise` on PHP. |
 | 1.0 | planned | Docs site, JSON-Schema-validated config, public stability commitment on the emitter API |
-| Later | — | `ts-valibot`, `ts-arktype`, `ts-typebox`, `ts-effect-schema`, `ts-standard-schema`, PHP emitter family |
+| Later | — | `ts-valibot`, `ts-arktype`, `ts-typebox`, `ts-effect-schema`, `ts-standard-schema`, Go and Rust emitter families |
 
 ## Contributing
 

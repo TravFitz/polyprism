@@ -1,0 +1,138 @@
+# @polyprism/php-class
+
+Prisma 6 & 7 generator that emits **PHP 8.1+ classes** from your `schema.prisma`. Public typed properties via constructor property promotion. Part of [PolyPrism](https://github.com/TravFitz/polyprism).
+
+```prisma
+generator polyprismCodegen {
+  provider = "polyprism-php-class"
+  output   = "../src/Generated"
+}
+```
+
+That's the whole API. Pair it with a composer.json psr-4 mapping and you're done:
+
+```json
+{
+  "autoload": {
+    "psr-4": { "Generated\\": "src/Generated/" }
+  }
+}
+```
+
+## What it emits
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Generated\Models;
+
+use Generated\Enums\Role;
+
+final class User
+{
+    public function __construct(
+        public string $id,
+        public string $email,
+        public ?string $name = null,
+        public Role $role = Role::MEMBER,
+        public \DateTimeImmutable $createdAt = new \DateTimeImmutable(),
+    ) {}
+}
+```
+
+Files land at:
+
+- `<outputDir>/Models/<ClassName>.php` — one per Prisma model
+- `<outputDir>/Enums/<EnumName>.php` — PHP 8.1+ backed enums
+
+## Why a separate package for plain classes
+
+The PHP class shape is the natural mutable counterpart to TypeScript's `ts-class`. Public typed properties + constructor property promotion is the canonical PHP 8 shorthand for "DTO with no setter logic", and it's the right default when you want to:
+
+- Hydrate from request payloads or DB rows without ceremony.
+- Mutate fields in place (e.g. updating a status before saving).
+- Round-trip cleanly through `json_encode` / `json_decode`.
+
+If you want immutability (value objects), use [`@polyprism/php-readonly`](https://www.npmjs.com/package/@polyprism/php-readonly) instead — same shape, but the class is marked `readonly` and properties can't be reassigned after construction.
+
+For setter-driven `@normalise` / `@coerce` data laundering (the PHP analog of `ts-domain-class`), wait for `@polyprism/php-domain-class` — that'll need PHP 8.4 property hooks and a Composer-published runtime.
+
+## Type mapping
+
+| Prisma | PHP | Notes |
+|---|---|---|
+| `String` | `string` | |
+| `Int` | `int` | |
+| `Float` | `float` | |
+| `Boolean` | `bool` | |
+| `DateTime` | `\DateTimeImmutable` | Always immutable — `\DateTime` is foot-bullet API |
+| `BigInt` | `int` | PHP `int` is 64-bit on every modern target. Set `@type("string", ...)` if you need values beyond `PHP_INT_MAX` |
+| `Decimal` | `string` | No native arbitrary-precision decimal in PHP — use `brick/math` or BCMath at the consumer |
+| `Json` | `mixed` | `@json(...)` falls back to `mixed` in v0 (PHP has no structural typing for anonymous objects) |
+| `Bytes` | `string` | PHP convention for binary data |
+| Enums | `EnumName` | Emits as PHP 8.1+ backed enum (`enum X: string`) |
+| Relations | `ClassName` | Cross-namespace targets get a `use` statement |
+| `Type?` | `?Type` | PHP nullable shorthand |
+| `Type[]` | `array` | With PHPDoc `@var array<int, Type>` for static analysers |
+
+## Annotation support
+
+| Annotation | Behaviour |
+|---|---|
+| `@hide` | Field omitted from the class body |
+| `@deprecated("reason")` | PHPDoc `@deprecated` tag |
+| `@name(NewName)` | Renames the class / property identifier |
+| `@type("\\Brick\\Math\\BigDecimal")` | Overrides the PHP type expression verbatim |
+| `@coerce` / `@normalise` / `@noCoerce` | Recognised but ignored (deferred to `php-domain-class`) |
+| `@json(...)` | Warning + falls back to `mixed` |
+
+## Defaults
+
+PHP defaults are emitted where they're statically representable:
+
+- Literal scalars (`String`, `Int`, `Float`, `Boolean`)
+- Enum cases (`Role::MEMBER`)
+- `@default(now())` becomes `new \DateTimeImmutable()`
+- Lists default to `[]`
+- Nullable scalars without an explicit Prisma default get `= null`
+
+Unrepresentable defaults — `cuid()`, `uuid()`, `autoincrement()`, `@default(dbgenerated(...))` — produce a required constructor argument. Prisma assigns these at insert time, so the consumer either lets Prisma fill them or provides them explicitly.
+
+## Constructor argument ordering
+
+Required parameters come first, optional (defaulted) parameters second. Within each group, schema field order is preserved. This avoids PHP 8.4's deprecation warning for optional-before-required parameters and is idiomatic PHP — named-argument callers are unaffected; positional callers get a stable required-first ordering.
+
+## Why `final`?
+
+Every generated class is marked `final`. That's deliberate: a generated DTO is regenerated every time the schema changes, and a hand-written subclass that depends on the parent's shape silently breaks whenever a field is renamed, removed, or retyped. `final` makes that contract enforceable at the language level instead of hoping nobody opens the door.
+
+If you need domain logic on top of the generated DTO, the supported pattern is **composition over inheritance** — wrap the generated class:
+
+```php
+final class UserDomain
+{
+    public function __construct(
+        public readonly User $dto,
+        // ... domain-only state
+    ) {}
+
+    public function isActive(): bool
+    {
+        return $this->dto->active && $this->dto->loyaltyPoints > 0;
+    }
+}
+```
+
+Or add domain methods to a separate service class that accepts the DTO as a parameter. Both patterns survive schema regeneration without breakage.
+
+## Links
+
+- [PolyPrism on GitHub](https://github.com/TravFitz/polyprism) — full feature list, annotation reference, side-by-side pattern examples
+- [`@polyprism/php-readonly`](https://www.npmjs.com/package/@polyprism/php-readonly) — same shape but `final readonly class` (PHP 8.2+)
+- [Issue tracker](https://github.com/TravFitz/polyprism/issues)
+
+## License
+
+[MIT](https://github.com/TravFitz/polyprism/blob/main/LICENSE) © Travis Fitzgerald

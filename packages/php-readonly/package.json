@@ -1,0 +1,62 @@
+{
+  "name": "@polyprism/php-readonly",
+  "version": "0.0.0",
+  "description": "Prisma 6 & 7 generator that emits PHP 8.2+ `final readonly class` value objects from your schema. Immutable DTOs with constructor property promotion. Pure ESM, zero runtime deps. Part of PolyPrism.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Travis Fitzgerald",
+  "homepage": "https://github.com/TravFitz/polyprism/tree/main/packages/php-readonly",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TravFitz/polyprism.git",
+    "directory": "packages/php-readonly"
+  },
+  "bugs": {
+    "url": "https://github.com/TravFitz/polyprism/issues"
+  },
+  "bin": {
+    "polyprism-php-readonly": "./dist/generator.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "polyprism-source": {
+        "types": "./src/index.ts",
+        "import": "./src/index.ts"
+      },
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "prisma",
+    "prisma-generator",
+    "prisma-7",
+    "php",
+    "php-8",
+    "readonly",
+    "value-object",
+    "dto",
+    "codegen",
+    "esm",
+    "polyprism"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@polyprism/core": "workspace:*",
+    "@polyprism/php-shared": "workspace:*"
+  }
+}

@@ -56,6 +56,19 @@ importers:
         specifier: ^6.19.3
         version: 6.19.3(magicast@0.3.5)(typescript@5.9.3)
 
+  examples/php-class-showcase:
+    dependencies:
+      '@polyprism/php-class':
+        specifier: workspace:*
+        version: link:../../packages/php-class
+      '@prisma/client':
+        specifier: ^6.19.3
+        version: 6.19.3(prisma@6.19.3(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3)
+    devDependencies:
+      prisma:
+        specifier: ^6.19.3
+        version: 6.19.3(magicast@0.3.5)(typescript@5.9.3)
+
   examples/simple-blog:
     dependencies:
       '@polyprism/ts-type':
@@ -81,6 +94,30 @@ importers:
       '@prisma/generator-helper':
         specifier: ^7.0.0
         version: 7.8.0
+
+  packages/php-class:
+    dependencies:
+      '@polyprism/core':
+        specifier: workspace:*
+        version: link:../core
+      '@polyprism/php-shared':
+        specifier: workspace:*
+        version: link:../php-shared
+
+  packages/php-readonly:
+    dependencies:
+      '@polyprism/core':
+        specifier: workspace:*
+        version: link:../core
+      '@polyprism/php-shared':
+        specifier: workspace:*
+        version: link:../php-shared
+
+  packages/php-shared:
+    dependencies:
+      '@polyprism/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/runtime: {}
 
