@@ -20,14 +20,16 @@ The PHP-specific layer between [`@polyprism/core`](https://www.npmjs.com/package
 - **`emitPhpModels(ctx, opts)`** — the top-level pipeline. Walks the IR, renders enums and models, surfaces any emit-time diagnostics, and writes everything to `<outputDir>/Enums/*.php` + `<outputDir>/Models/*.php`.
 - **`renderPhpModel(opts)`** — emits one model file as a PHP class. Two declaration styles (`"class"` and `"readonly"`) share the same field-by-field rendering loop; the keyword block at the top of the class is the only differentiator.
 - **`renderPhpEnum(opts)`** — emits a PHP 8.1+ backed enum (`enum Role: string { case ADMIN = 'ADMIN'; }`).
-- **`mapFieldPhpType`** — IR field → PHP type expression. Handles scalars, enums, relations, nullability, and lists (with PHPDoc `@var array<int, T>` hints).
+- **`mapFieldPhpType`** — IR field → PHP type expression. Handles scalars, enums, relations, nullability, lists (with PHPDoc `@var array<int, T>` hints), and resolves `@json` references to generated value classes.
+- **`renderPhpJsonType`** — Parses a TS-shaped inline `@json` expression (a small supported subset) and emits a `final readonly class` for it. Nested objects collapse to PHPDoc `array{...}` shapes rather than spawning sub-classes.
 - **`UseCollector`** — deduped, sorted `use`-statement builder. Skips same-namespace references automatically.
 - **`renderPhpDoc`** — PHPDoc emission for `///` docs, `@deprecated` tags, native-type metadata, and list-element hints.
 
 ## What's NOT in here (v0 scope)
 
 - `@coerce` / `@normalise` / `@noCoerce` annotations are recognised but ignored. They're domain-class concepts that need PHP 8.4 property hooks and a Composer-published runtime helper — that'll ship as a future `@polyprism/php-domain-class`.
-- `@json(...)` annotations on Json fields fall back to `mixed` with a warning. PHP doesn't have a structural-typing equivalent of TS's anonymous object types.
+- TS unions / generics / identifier references inside an inline `@json` shape — fall back to `mixed` with a warning. Use `@type("\\App\\YourType")` to point at a hand-written PHP class for richer typing.
+- Bare and with-path `@json` forms (e.g. `@json(SomeType)`, `@json(SomeType from "./path")`) — these rely on TS module imports that don't translate to PHP autoloading. Warn + fall back to `mixed`.
 - Source-position line numbers on diagnostics — DMMF doesn't expose them, so issues carry `Model.field` context strings instead.
 
 ## Why this is split out from `@polyprism/core`

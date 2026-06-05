@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Generated\Models;
 
 use Generated\Enums\OrderStatus;
+use Generated\JsonTypes\OrderRawPayload;
+use Generated\JsonTypes\ShippingDetails;
 
 /**
  * A single order placed by a customer. Demonstrates the self-reference
@@ -24,6 +26,12 @@ final class Order
          * Total in the currency's smallest unit (cents).
          */
         public int $totalCents,
+        /**
+         * Inline-named JSON — emits to JsonTypes/ShippingDetails.php as a
+         * final readonly value class. Exercises optional fields, nested
+         * objects (PHPDoc array shape), and arrays of primitives.
+         */
+        public ShippingDetails $shipping,
         public string $customerId,
         public Customer $customer,
         public OrderStatus $status = OrderStatus::PENDING,
@@ -39,9 +47,10 @@ final class Order
          */
         public ?string $receiptBlob = null,
         /**
-         * Free-form JSON payload from the upstream API. Falls back to `mixed`.
+         * Inline-anonymous JSON — emits to JsonTypes/OrderRawPayload.php as
+         * a final readonly value class. Auto-named from Model + Field.
          */
-        public mixed $rawPayload = null,
+        public ?OrderRawPayload $rawPayload = null,
         public \DateTimeImmutable $placedAt = new \DateTimeImmutable(),
         public ?\DateTimeImmutable $shippedAt = null,
         public ?string $parentOrderId = null,

@@ -33,6 +33,7 @@
 //   - Lists are `array` in the signature; PHPDoc carries the element type.
 
 import type { FieldDef, ScalarType } from "@polyprism/core";
+import { autoNameInlineJson } from "@polyprism/core";
 
 import type { Diagnostic } from "./diagnostics.js";
 import type { UseCollector } from "./use-collector.js";
@@ -45,6 +46,17 @@ export interface PhpTypeMapperOptions {
   readonly modelFqnLookup: ReadonlyMap<string, string>;
   /** FQN of the currently rendered model — relation fields back at this skip a `use`. */
   readonly selfModelFqn: string;
+  /** Root namespace of generated JSON value classes, e.g. `"Generated\\JsonTypes"`. */
+  readonly jsonTypesNamespace: string;
+  /**
+   * Names of JSON value classes that emit-models successfully generated
+   * for inline @json forms. Inline-form Json fields resolve to one of
+   * these names (registering a `use`); inline shapes that failed parser
+   * validation aren't in this set, so the field falls back to `mixed`
+   * — the emit-models loop already produced a Diagnostic for the
+   * unparseable shape, and double-warning would be noisy.
+   */
+  readonly jsonTypeClassNames: ReadonlySet<string>;
   /** Optional sink for warnings raised during mapping (unsupported @json, etc). */
   readonly onDiagnostic?: (d: Diagnostic) => void;
 }
@@ -77,15 +89,41 @@ function mapBasePhpType(opts: PhpTypeMapperOptions): string {
     return overrideType.startsWith("?") ? overrideType.slice(1).trimStart() : overrideType;
   }
 
-  // (2) @json on Json field — unsupported in PHP for v0; warn and fall back.
+  // (2) @json on Json field — resolves by form:
+  //   - inline-anonymous / inline-named → generated class under JsonTypes/
+  //     namespace, registered with the use collector
+  //   - bare / with-path → warn and fall back to `mixed`. Bare TS @json
+  //     trusts the user to have imported the type, which has no clean PHP
+  //     equivalent (you'd want to point at a real PHP class via @type
+  //     instead). With-path's "from './path'" doesn't translate either.
   if (field.type.kind === "scalar" && field.type.scalar === "Json" && field.annotations.json) {
+    const json = field.annotations.json;
+    const fieldPath = `${opts.modelSchemaName}.${field.name}`;
+    if (json.kind === "inline-anonymous" || json.kind === "inline-named") {
+      const className =
+        json.kind === "inline-anonymous"
+          ? autoNameInlineJson(opts.modelSchemaName, field.name)
+          : json.typeName;
+      if (opts.jsonTypeClassNames.has(className)) {
+        return opts.uses.add(`${opts.jsonTypesNamespace}\\${className}`);
+      }
+      // The emit-models pipeline rejected the inline shape (and already
+      // emitted a Diagnostic explaining why). Fall back silently.
+      return "mixed";
+    }
+    // Bare and with-path forms — warn the user about the PHP gap once.
+    const reason =
+      json.kind === "bare"
+        ? `the bare \`@json(${json.typeName})\` form trusts the user to have imported ` +
+          `${json.typeName} in TypeScript, which doesn't translate to PHP autoloading. ` +
+          `Use \`@type("\\\\Vendor\\\\YourType")\` to point at a hand-written PHP class.`
+        : `the with-path \`@json(${json.typeName} from "...")\` form refers to a ` +
+          `TypeScript source file, which doesn't translate to PHP. Use ` +
+          `\`@type("\\\\Vendor\\\\YourType")\` to point at a hand-written PHP class.`;
     opts.onDiagnostic?.({
       severity: "warning",
-      context: `${opts.modelSchemaName}.${field.name}`,
-      message:
-        "PHP emitter does not yet resolve @json(...) annotations to typed shapes — " +
-        "the field will be typed as `mixed`. Use @type(...) to set a specific PHP " +
-        "class or array shape if you need stricter typing.",
+      context: fieldPath,
+      message: `PHP emitter cannot resolve this @json form: ${reason} Falling back to \`mixed\`.`,
     });
     return "mixed";
   }
