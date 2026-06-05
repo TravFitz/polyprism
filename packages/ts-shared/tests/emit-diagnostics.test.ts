@@ -31,7 +31,11 @@ import { describe, expect, it, vi } from "vitest";
 import type { Diagnostic } from "../src/diagnostics.js";
 import { emitModels } from "../src/emit-models.js";
 
-function field(name: string, scalar: "String" | "Int" | "Boolean", documentation?: string): FieldDef {
+function field(
+  name: string,
+  scalar: "String" | "Int" | "Boolean",
+  documentation?: string,
+): FieldDef {
   const annotations = documentation ? parseAnnotations(documentation) : emptyAnnotationSet(null);
   return {
     name,
@@ -80,10 +84,7 @@ function makeContext(models: ModelDef[]): {
 describe("emit-time diagnostics — parser issues", () => {
   it("surfaces a parser warning with model.field context when @noCoerce is called with args", async () => {
     const { ctx, diagnostics } = makeContext([
-      model("User", [
-        field("id", "String"),
-        field("count", "Int", "@noCoerce(int)"),
-      ]),
+      model("User", [field("id", "String"), field("count", "Int", "@noCoerce(int)")]),
     ]);
 
     await emitModels(ctx, {
@@ -98,9 +99,7 @@ describe("emit-time diagnostics — parser issues", () => {
   });
 
   it("calls onDiagnostic zero times for a clean schema", async () => {
-    const { ctx } = makeContext([
-      model("User", [field("id", "String"), field("email", "String")]),
-    ]);
+    const { ctx } = makeContext([model("User", [field("id", "String"), field("email", "String")])]);
 
     const onDiagnostic = vi.fn<(d: Diagnostic) => void>();
     await emitModels(ctx, { declarationStyle: "domain-class", onDiagnostic });
@@ -126,9 +125,7 @@ describe("emit-time diagnostics — coerce-rules issues", () => {
       onDiagnostic: (d) => diagnostics.push(d),
     });
 
-    const issue = diagnostics.find(
-      (d) => d.context === "User.email" && d.severity === "warning",
-    );
+    const issue = diagnostics.find((d) => d.context === "User.email" && d.severity === "warning");
     expect(issue).toBeDefined();
     expect(issue?.message.toLowerCase()).toContain("strict by default");
   });
