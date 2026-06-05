@@ -165,6 +165,11 @@ export async function emitPhpModels(
       // shape that's referenced from multiple places, so the JSON type
       // class itself is the locus.
       diagnosticContext: `JsonTypes.${typeName}`,
+      // JsonType readonly syntax follows the parent's declaration style —
+      // per-property `readonly` for `php-class` (PHP 8.1 floor) so we don't
+      // silently emit 8.2-only `final readonly class` syntax from an 8.1-
+      // documented package. Same semantics either way.
+      declarationStyle: opts.declarationStyle,
     });
     for (const issue of issues) emit(issue);
     if (source.length === 0) {

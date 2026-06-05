@@ -27,7 +27,7 @@ Both build on a new `@polyprism/php-shared` rendering layer, mirroring how the T
 - Cross-file relations via PSR-4 `use` statements, with self-references and same-namespace references short-circuiting cleanly.
 - PHP defaults for literal scalars, enum cases, and `now()` (`new \DateTimeImmutable()`); `cuid()`/`uuid()` defaults become required constructor arguments.
 - Constructor parameters are sorted required-first, optional-second — PHP 8.4-deprecation safe.
-- Annotation support: `@hide`, `@deprecated`, `@name`, `@type`. `@coerce`/`@normalise`/`@noCoerce` are recognised but ignored in v0 (deferred to a future `@polyprism/php-domain-class` with PHP 8.4 property hooks).
+- Annotation support: `@hide`, `@deprecated`, `@name`, `@type`, `@json` (see "Typed JSON columns" below). `@coerce`/`@normalise`/`@noCoerce` are recognised but ignored in v0 (deferred to a future `@polyprism/php-domain-class` with PHP 8.4 property hooks).
 
 **Typed JSON columns** via `@json(...)`:
 
@@ -37,7 +37,7 @@ Both build on a new `@polyprism/php-shared` rendering layer, mirroring how the T
 - Bare (`@json(SomeType)`) and with-path (`@json(SomeType from "./path")`) forms warn + fall back to `mixed` — these rely on TS module imports with no PHP autoloading equivalent.
 - Auto-naming collisions (two different shapes resolving to the same class name) emit a warning identifying both source fields.
 
-**Verified Composer-compliant.** The committed showcase output passes `composer dump-autoload --strict-psr` with zero warnings, parses cleanly under `php -l` 8.2, and is exercised end-to-end via Composer's PSR-4 autoloader (instantiating every generated class, including `final readonly` enforcement, `@hide` field omission, and `json_encode` round-trip). The same `php -l` + `--strict-psr` checks run in CI on every push.
+**Verified Composer-compliant.** Every push to this repo runs four PHP-side gates against the committed showcase output: `php -l` under both PHP 8.1 (the php-class floor) and 8.2 (the php-readonly floor); `composer dump-autoload --strict-psr` to verify file/namespace/directory layout; a smoke script that autoloads through Composer, instantiates every generated class, exercises `final readonly` enforcement, verifies `@hide` actually omits the field from the constructor signature, and round-trips `json_encode`; and a drift check that regenerates the showcase and fails if the output differs from the committed version.
 
 The packages emit under `<outputDir>/Models/<ClassName>.php`, `<outputDir>/Enums/<EnumName>.php`, and `<outputDir>/JsonTypes/<Name>.php`. Consumers wire the generated dir into `composer.json` autoload with a single psr-4 entry (default root namespace: `Generated\\`).
 

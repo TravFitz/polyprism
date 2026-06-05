@@ -311,9 +311,13 @@ and `Generated\Enums`; wire it into `composer.json` autoload:
 | `@polyprism/php-class` | **8.1** | Backed enums (`enum X: string`), `new \DateTimeImmutable()` in default param values (the "new in initializers" RFC), enum-case defaults (`Role::MEMBER`), the `mixed` type, constructor property promotion |
 | `@polyprism/php-readonly` | **8.2** | Everything above plus the class-level `readonly` modifier (per-property `readonly` exists in 8.1, but `final readonly class` is 8.2) |
 
-No upper limit — emitted code is forward-compatible through PHP 8.3, 8.4 (deprecates optional-before-required, which we already sort around), and the planned 9.0. PHP 8.1 entered security-only support in late 2024 and ended security support 2025-12; we still target it as the floor because much of the active Composer ecosystem hasn't yet moved.
+No upper limit — emitted code is forward-compatible through PHP 8.3, 8.4 (deprecates optional-before-required, which we already sort around), and the planned 9.0. PHP 8.1's security support ended 2025-12; we still target it as the floor because much of the active Composer ecosystem hasn't yet moved. CI lints every emitted file under both 8.1 (floor) and 8.2 (current target) on every push.
 
-**Verified Composer-compliant.** The committed showcase output passes `composer dump-autoload --strict-psr` with zero warnings, and is exercised end-to-end through Composer's PSR-4 autoloader (instantiating every generated class, including `final readonly` enforcement, `@hide` field omission, and `json_encode` round-trip) before each release. The same check runs in CI.
+**Verified Composer-compliant.** Every push to this repo runs four PHP-side gates against the committed showcase output:
+- `php -l` under PHP 8.1 (the php-class floor) and PHP 8.2 (the php-readonly floor) — pure syntax check, no surprises by version.
+- `composer dump-autoload --strict-psr` — file-name / namespace / directory layout must all align with PSR-4 or the build fails.
+- A smoke script (`examples/php-class-showcase/scripts/smoke.php`) that autoloads through Composer, instantiates every generated class, exercises `final readonly` enforcement, verifies `@hide` actually omits the field from the constructor signature, and round-trips `json_encode`.
+- A drift check that regenerates the showcase and `git diff --exit-code`s the result against the committed version — so the renderer can't quietly drift away from what the docs claim.
 
 PHP scalar mapping: `String → string`, `Int → int`, `Float → float`,
 `Boolean → bool`, `DateTime → \DateTimeImmutable`, `BigInt → int`
@@ -491,7 +495,7 @@ and a different complexity tier:
 | Version | State | Adds |
 |---|---|---|
 | **0.1** | shipped | `ts-interface`, `ts-type`, `ts-class`, **`ts-domain-class`** (with setter-driven `@normalise`/`@coerce`, `from()`, `toJSON()`, fluent builder), `@polyprism/runtime` helpers, 8 annotations, three-axis naming, enum + JSON-type file emission |
-| **0.2** | next | **PHP emitter family** — `php-class` (PHP 8.1+) and `php-readonly` (PHP 8.2+). Constructor property promotion, PHP 8.1+ backed enums, PSR-4-compatible file layout. May be accompanied by diagnostic-surface polish on the TS family (emit-time issues flowing through a proper reporter) if that change lands in the same release window. |
+| **0.2** | next | **PHP emitter family** — `php-class` (PHP 8.1+) and `php-readonly` (PHP 8.2+). Constructor property promotion, PHP 8.1+ backed enums, typed `@json` value classes under `JsonTypes/`, PSR-4-compatible file layout. Diagnostic-surface polish on the TS family (emit-time issues flowing through a proper reporter instead of being silently dropped) also lands in this release. |
 | 0.3 | planned | `ts-zod` — Zod schema emission, sharing the same naming and annotation pipeline as the type-shape patterns. Also: `php-domain-class` with PHP 8.4 property hooks + a Composer-published `polyprism/runtime` for setter-driven `@coerce`/`@normalise` on PHP. |
 | 1.0 | planned | Docs site, JSON-Schema-validated config, public stability commitment on the emitter API |
 | Later | — | `ts-valibot`, `ts-arktype`, `ts-typebox`, `ts-effect-schema`, `ts-standard-schema`, Go and Rust emitter families |
