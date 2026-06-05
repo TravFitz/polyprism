@@ -1,6 +1,6 @@
 {
   "name": "@polyprism/php-shared",
-  "version": "0.0.0",
+  "version": "0.2.0",
   "description": "Shared PHP rendering primitives used by PolyPrism's Prisma 6 & 7 PHP generators (php-class, php-readonly). Pure ESM.",
   "type": "module",
   "license": "MIT",
