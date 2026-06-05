@@ -47,7 +47,7 @@ Same shape as [`@polyprism/php-class`](https://www.npmjs.com/package/@polyprism/
 ## When to use this over `php-class`
 
 - **You want value objects** — DTOs that should never mutate after construction. Read-only enforcement at the language level means accidental writes get caught by the engine, not by code review.
-- **You want safe sharing** — readonly classes are safe to pass through threads (in PHP 8.4's parallel runtime) and across boundaries without copying.
+- **You want safe sharing** — readonly is the right shape for data you pass around without defensive copying: queue payloads, FFI handlers, event objects, anything that travels through a pipeline you don't fully own.
 - **You're modelling events / value semantics** — orders, payments, audit entries: things that, once recorded, shouldn't change.
 
 Use [`@polyprism/php-class`](https://www.npmjs.com/package/@polyprism/php-class) when you need to mutate properties in place (e.g. updating a status before saving). The two patterns are otherwise identical — same constructor signature, same property types, same `use` statements.

@@ -274,6 +274,35 @@ describe("php-class — relations", () => {
     expect(out).toContain("public ?Node $parent = null");
     expect(out).not.toContain("use Generated\\Models\\Node;");
   });
+
+  it("emits multiple cross-namespace `use` lines (sorted) when a model references both an enum and a foreign-namespace target", async () => {
+    // Custom namespaces — every cross-namespace reference must surface as
+    // its own `use` line, and the lines should be sorted lexicographically
+    // (matching standard PHP-CS-Fixer's OrderedImportsFixer behaviour).
+    const { ctx, writer } = makeContext(
+      [
+        model("User", [
+          field("id", scalar("String")),
+          field("role", enumRef("Role")),
+          field("createdAt", scalar("DateTime")),
+        ]),
+      ],
+      [enumDef("Role", ["ADMIN"])],
+    );
+    await emitPhpModels(ctx, {
+      declarationStyle: "class",
+      modelsNamespace: "App\\Domain\\Entities",
+      enumsNamespace: "App\\Domain\\Enums",
+    });
+    const out = writer.files.get("Models/User.php")!;
+    // Enum is in a different namespace → must produce a use.
+    expect(out).toContain("use App\\Domain\\Enums\\Role;");
+    // \DateTimeImmutable is a built-in (global namespace); it's referenced
+    // verbatim and never gets a use.
+    expect(out).not.toContain("use \\DateTimeImmutable;");
+    // The constructor still references the short enum name.
+    expect(out).toContain("public Role $role");
+  });
 });
 
 describe("php-class — defaults", () => {
@@ -429,6 +458,29 @@ describe("php-class — annotations", () => {
     await emitPhpModels(ctx, { declarationStyle: "class" });
     const out = writer.files.get("Models/M.php")!;
     expect(out).toContain("public \\Brick\\Math\\BigDecimal $amount");
+    // Defensive: confirm the original Decimal → string mapping is GONE,
+    // not just shadowed by the override-substring assertion above.
+    expect(out).not.toContain("public string $amount");
+  });
+
+  it("strips a leading `?` from a @type override on an optional field (avoid `??Foo`)", async () => {
+    // If the user writes `@type("?Foo")` on an optional field, the renderer
+    // must NOT produce `??Foo` (a PHP syntax error). wrapNullability will
+    // reapply the `?` for optional fields, so we strip any leading `?` from
+    // the override first.
+    const typeAnnotations: AnnotationSet = {
+      ...emptyAnnotationSet(null),
+      type: { typeName: "?Foo", importPath: null },
+    };
+    const { ctx, writer } = makeContext([
+      model("M", [
+        field("f", scalar("String"), { isRequired: false, annotations: typeAnnotations }),
+      ]),
+    ]);
+    await emitPhpModels(ctx, { declarationStyle: "class" });
+    const out = writer.files.get("Models/M.php")!;
+    expect(out).toContain("public ?Foo $f");
+    expect(out).not.toContain("??Foo");
   });
 
   it("warns + falls back to mixed when @json(...) is present on a Json field", async () => {
