@@ -168,18 +168,32 @@ jobs:
             echo "::endgroup::"
           done
 
-      # PHP showcase: parse-check every emitted .php file with `php -l`, then
-      # verify the regenerated output didn't drift from what's committed. The
-      # drift check is the PHP-side equivalent of the TS typecheck — it
-      # catches "renderer changed shape but committed showcase didn't get
-      # updated" the same way TS errors catch "generated TS no longer
-      # compiles after a renderer change".
-      - name: Set up PHP for showcase lint
+      # PHP showcase: parse-check every emitted .php file under both the
+      # documented floor (PHP 8.1, the php-class baseline) AND the latest
+      # supported stable (PHP 8.2). 8.1 catches accidental use of 8.2-only
+      # syntax (e.g. class-level `readonly` modifier) sneaking into output
+      # that the php-class package claims is 8.1-compatible. 8.2 is the
+      # version the smoke test uses below; pin it explicitly so a future
+      # default-version bump doesn't silently change what we test.
+      - name: Set up PHP 8.1 (floor)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+          tools: composer:v2
+
+      - name: Lint emitted PHP under PHP 8.1 (matches php-class documented floor)
+        run: |
+          set -e
+          find examples/php-class-showcase/generated -name "*.php" -type f -print0 \
+            | xargs -0 -n1 php -l
+
+      - name: Set up PHP 8.2 (matches php-readonly floor + smoke test target)
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
+          tools: composer:v2
 
-      - name: Lint emitted PHP + check committed showcase is current
+      - name: Lint emitted PHP under PHP 8.2 + drift check
         run: |
           set -e
           echo "::group::php -l every emitted .php file"
@@ -194,13 +208,18 @@ jobs:
       # composer project and run `composer dump-autoload --strict-psr`.
       # With --strict-psr, Composer exits non-zero on any file whose class
       # name doesn't match its file name (case-sensitive) or whose namespace
-      # doesn't match the directory path. Catches "PHP parses but Composer
-      # can't autoload it" — a real class of bug that `php -l` alone misses.
-      - name: Verify generated PHP is Composer-strict-PSR-4 compliant
+      # doesn't match the directory path. Then run the smoke script which
+      # instantiates every generated class via the autoloader, exercises
+      # `final readonly` enforcement, verifies `@hide` actually drops the
+      # field from the constructor signature, and round-trips `json_encode`.
+      # Together they prove the autoloader + runtime claims in the README.
+      - name: Verify Composer PSR-4 compliance + run smoke script
         run: |
           set -e
           tmp="$(mktemp -d)"
           cp -r examples/php-class-showcase/generated "$tmp/src"
+          mkdir -p "$tmp/scripts"
+          cp examples/php-class-showcase/scripts/smoke.php "$tmp/scripts/smoke.php"
           cat > "$tmp/composer.json" <<'JSON'
           {
               "name": "polyprism/ci-compliance-check",
@@ -210,4 +229,9 @@ jobs:
           }
           JSON
           cd "$tmp"
+          echo "::group::composer dump-autoload --strict-psr"
           composer dump-autoload --strict-psr --optimize
+          echo "::endgroup::"
+          echo "::group::Run smoke.php (instantiate + readonly + @hide + json_encode)"
+          php scripts/smoke.php
+          echo "::endgroup::"

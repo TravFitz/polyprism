@@ -46,6 +46,16 @@ export interface RenderJsonTypeOptions {
    * find the schema source of an unsupported-shape warning.
    */
   readonly diagnosticContext: string;
+  /**
+   * Determines the readonly syntax used:
+   *   - `"class"`: emit `final class Foo` with per-property `public readonly`
+   *     (works on PHP 8.1). Matches the floor of the `php-class` generator.
+   *   - `"readonly"`: emit `final readonly class Foo` (class-level modifier,
+   *     PHP 8.2+). Matches the floor of the `php-readonly` generator.
+   * Semantically both produce a value object whose properties can't be
+   * reassigned after construction; only the syntax differs.
+   */
+  readonly declarationStyle: "class" | "readonly";
 }
 
 export interface RenderJsonTypeResult {
@@ -92,7 +102,15 @@ export function renderPhpJsonType(opts: RenderJsonTypeOptions): RenderJsonTypeRe
     const nullableForOptional =
       prop.optional && !alreadyNullable(mapping.phpType) ? `?${mapping.phpType}` : mapping.phpType;
     const defaultExpr = prop.optional ? " = null" : "";
-    phpFields.push(`${phpDoc}        public ${nullableForOptional} $${prop.name}${defaultExpr},`);
+    // For `php-class` mode (PHP 8.1 floor), stamp `readonly` on each
+    // property individually since the class-level `readonly` modifier is
+    // PHP 8.2-only. For `php-readonly` mode, the class-level modifier
+    // already covers every property — adding per-property `readonly`
+    // there would be redundant and is rejected by PHP 8.2+.
+    const readonlyPrefix = opts.declarationStyle === "class" ? "readonly " : "";
+    phpFields.push(
+      `${phpDoc}        public ${readonlyPrefix}${nullableForOptional} $${prop.name}${defaultExpr},`,
+    );
   }
 
   // PHP 8.4-deprecation safe: optional (nullable + null default) come after
@@ -119,6 +137,16 @@ export function renderPhpJsonType(opts: RenderJsonTypeOptions): RenderJsonTypeRe
     { indent: 0 },
   );
 
+  // Class declaration keyword: `final class` + per-property readonly works
+  // on PHP 8.1+ and matches the `php-class` floor; `final readonly class`
+  // is the cleaner 8.2+ form and matches `php-readonly`. The semantics are
+  // identical from the caller's perspective: every property is set in the
+  // constructor and never reassigned.
+  const classDecl =
+    opts.declarationStyle === "readonly"
+      ? `final readonly class ${opts.typeName}`
+      : `final class ${opts.typeName}`;
+
   const source = [
     "<?php",
     "",
@@ -126,7 +154,7 @@ export function renderPhpJsonType(opts: RenderJsonTypeOptions): RenderJsonTypeRe
     "",
     `namespace ${opts.namespace};`,
     "",
-    `${headerDoc}final readonly class ${opts.typeName}\n{\n    public function __construct(${promotedBlock}) {}\n}`,
+    `${headerDoc}${classDecl}\n{\n    public function __construct(${promotedBlock}) {}\n}`,
     "",
   ].join("\n");
 

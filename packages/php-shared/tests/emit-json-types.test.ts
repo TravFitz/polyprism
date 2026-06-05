@@ -122,9 +122,9 @@ describe("@json — inline-anonymous form", () => {
     expect(writer.files.has("JsonTypes/UserSettings.php")).toBe(true);
     const out = writer.files.get("JsonTypes/UserSettings.php")!;
     expect(out).toContain("namespace Generated\\JsonTypes;");
-    expect(out).toContain("final readonly class UserSettings");
-    expect(out).toContain("public string $theme,");
-    expect(out).toContain("public string $locale,");
+    expect(out).toContain("final class UserSettings");
+    expect(out).toContain("public readonly string $theme,");
+    expect(out).toContain("public readonly string $locale,");
   });
 
   it("references the auto-named class from the model via a `use` statement and the short name", async () => {
@@ -161,9 +161,9 @@ describe("@json — inline-named form", () => {
     await emit(ctx, diagnostics);
     expect(writer.files.has("JsonTypes/BillingAddress.php")).toBe(true);
     const out = writer.files.get("JsonTypes/BillingAddress.php")!;
-    expect(out).toContain("final readonly class BillingAddress");
-    expect(out).toContain("public string $street,");
-    expect(out).toContain("public string $city,");
+    expect(out).toContain("final class BillingAddress");
+    expect(out).toContain("public readonly string $street,");
+    expect(out).toContain("public readonly string $city,");
   });
 
   it("dedupes when the same inline-named shape is referenced from multiple fields", async () => {
@@ -200,9 +200,9 @@ describe("@json — type translation", () => {
     ]);
     await emit(ctx, diagnostics);
     const out = writer.files.get("JsonTypes/Blob.php")!;
-    expect(out).toContain("public string $name,");
-    expect(out).toContain("public float $count,");
-    expect(out).toContain("public bool $active,");
+    expect(out).toContain("public readonly string $name,");
+    expect(out).toContain("public readonly float $count,");
+    expect(out).toContain("public readonly bool $active,");
   });
 
   it("maps `unknown` and `any` to PHP `mixed` without warning", async () => {
@@ -218,8 +218,8 @@ describe("@json — type translation", () => {
     ]);
     await emit(ctx, diagnostics);
     const out = writer.files.get("JsonTypes/Blob.php")!;
-    expect(out).toContain("public mixed $a,");
-    expect(out).toContain("public mixed $b,");
+    expect(out).toContain("public readonly mixed $a,");
+    expect(out).toContain("public readonly mixed $b,");
     // No warnings for explicit unknown/any — they're the intentional escape hatches.
     expect(diagnostics.filter((d) => d.severity === "warning")).toEqual([]);
   });
@@ -237,8 +237,8 @@ describe("@json — type translation", () => {
     ]);
     await emit(ctx, diagnostics);
     const out = writer.files.get("JsonTypes/Blob.php")!;
-    expect(out).toContain("public string $name,");
-    expect(out).toContain("public ?string $nick = null,");
+    expect(out).toContain("public readonly string $name,");
+    expect(out).toContain("public readonly ?string $nick = null,");
     // Required-first ordering applies inside JSON value classes too.
     expect(out.indexOf("$name")).toBeLessThan(out.indexOf("$nick"));
   });
@@ -256,7 +256,7 @@ describe("@json — type translation", () => {
     ]);
     await emit(ctx, diagnostics);
     const out = writer.files.get("JsonTypes/Blob.php")!;
-    expect(out).toContain("public array $tags,");
+    expect(out).toContain("public readonly array $tags,");
     expect(out).toContain("@var array<int, string>");
   });
 
@@ -273,7 +273,7 @@ describe("@json — type translation", () => {
     ]);
     await emit(ctx, diagnostics);
     const out = writer.files.get("JsonTypes/Blob.php")!;
-    expect(out).toContain("public array $outer,");
+    expect(out).toContain("public readonly array $outer,");
     expect(out).toContain("@var array{inner: string, count: float}");
     // No accidental sub-class file spawned for the nested shape.
     expect(writer.files.has("JsonTypes/BlobOuter.php")).toBe(false);
@@ -294,7 +294,7 @@ describe("@json — unsupported shapes warn + fall back", () => {
     ]);
     await emit(ctx, diagnostics);
     const out = writer.files.get("JsonTypes/Blob.php")!;
-    expect(out).toContain("public mixed $value,");
+    expect(out).toContain("public readonly mixed $value,");
     const warn = diagnostics.find((d) => d.context === "JsonTypes.Blob");
     expect(warn?.severity).toBe("warning");
     expect(warn?.message).toContain("supported subset");
@@ -423,11 +423,11 @@ describe("@json — input validation edge cases", () => {
     expect(warn?.severity).toBe("warning");
   });
 
-  it("accepts an empty object `{}` and emits a no-op final readonly class", async () => {
-    // An empty inline shape is unusual but harmless — `final readonly class
-    // Empty { public function __construct() {} }` is valid PHP and locks
-    // in the shape if the user later expands it. Document the behaviour
-    // by asserting on it so future refactors don't silently drift.
+  it("accepts an empty object `{}` and emits a no-op final class", async () => {
+    // An empty inline shape is unusual but harmless — `final class Empty {
+    // public function __construct() {} }` is valid PHP and locks in the
+    // shape if the user later expands it. Document the behaviour by
+    // asserting on it so future refactors don't silently drift.
     const { ctx, diagnostics, writer } = makeContext([
       model("M", [
         fieldPlain("id", "String"),
@@ -441,8 +441,51 @@ describe("@json — input validation edge cases", () => {
     await emit(ctx, diagnostics);
     expect(writer.files.has("JsonTypes/Empty.php")).toBe(true);
     const out = writer.files.get("JsonTypes/Empty.php")!;
-    expect(out).toContain("final readonly class Empty");
+    expect(out).toContain("final class Empty");
     expect(out).toContain("public function __construct() {}");
+  });
+});
+
+describe("@json — readonly syntax depends on declarationStyle", () => {
+  it("emits `final class` + per-property `readonly` for the php-class style (PHP 8.1 floor)", async () => {
+    // `final readonly class` is PHP 8.2+ only; the php-class generator
+    // targets 8.1 so JsonType classes must use the per-property readonly
+    // syntax instead.
+    const { ctx, diagnostics, writer } = makeContext([
+      model("M", [
+        fieldPlain("id", "String"),
+        fieldWithJson("blob", {
+          kind: "inline-named",
+          typeName: "Blob",
+          typeExpression: "{ name: string }",
+        }),
+      ]),
+    ]);
+    await emit(ctx, diagnostics, { declarationStyle: "class" });
+    const out = writer.files.get("JsonTypes/Blob.php")!;
+    expect(out).toContain("final class Blob");
+    expect(out).not.toContain("final readonly class Blob");
+    expect(out).toContain("public readonly string $name,");
+  });
+
+  it("emits `final readonly class` for the php-readonly style (PHP 8.2 floor)", async () => {
+    const { ctx, diagnostics, writer } = makeContext([
+      model("M", [
+        fieldPlain("id", "String"),
+        fieldWithJson("blob", {
+          kind: "inline-named",
+          typeName: "Blob",
+          typeExpression: "{ name: string }",
+        }),
+      ]),
+    ]);
+    await emit(ctx, diagnostics, { declarationStyle: "readonly" });
+    const out = writer.files.get("JsonTypes/Blob.php")!;
+    expect(out).toContain("final readonly class Blob");
+    // Per-property `readonly` would be redundant + a PHP error on 8.2+
+    // when the class itself is already `readonly`.
+    expect(out).not.toContain("public readonly string $name,");
+    expect(out).toContain("public string $name,");
   });
 });
 
