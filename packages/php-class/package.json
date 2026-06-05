@@ -1,0 +1,59 @@
+{
+  "name": "@polyprism/php-class",
+  "version": "0.0.0",
+  "description": "Prisma 6 & 7 generator that emits PHP 8.1+ classes from your schema. Public typed properties via constructor property promotion. Pure ESM, zero runtime deps. Part of PolyPrism.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Travis Fitzgerald",
+  "homepage": "https://github.com/TravFitz/polyprism/tree/main/packages/php-class",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TravFitz/polyprism.git",
+    "directory": "packages/php-class"
+  },
+  "bugs": {
+    "url": "https://github.com/TravFitz/polyprism/issues"
+  },
+  "bin": {
+    "polyprism-php-class": "./dist/generator.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "polyprism-source": {
+        "types": "./src/index.ts",
+        "import": "./src/index.ts"
+      },
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "prisma",
+    "prisma-generator",
+    "prisma-7",
+    "php",
+    "php-8",
+    "codegen",
+    "esm",
+    "polyprism"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@polyprism/core": "workspace:*",
+    "@polyprism/php-shared": "workspace:*"
+  }
+}

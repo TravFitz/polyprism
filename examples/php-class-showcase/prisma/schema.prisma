@@ -1,0 +1,113 @@
+// PHP class showcase example.
+//
+// Exercises every behaviour of the `polyprism-php-class` emitter:
+//
+//   - **Scalar mapping** — String, Int, Float, Boolean, DateTime, BigInt,
+//     Decimal, Json, Bytes all map cleanly to their PHP equivalents.
+//   - **Nullable + list fields** — get `?Type` / `array` signatures with
+//     PHPDoc list element hints.
+//   - **Enums** — Prisma `enum X { ... }` becomes a PHP 8.1+ backed enum
+//     (`enum X: string`) in `Enums/X.php`.
+//   - **Relations** — 1-to-many (Customer ↔ Order) and self-reference
+//     (Order.parentOrder) both work without explicit `use` statements
+//     because everything lives in the same namespace.
+//   - **Defaults** — literal scalars, enum cases, `now()`, and unrepresentable
+//     defaults (cuid()) are all handled distinctly.
+//   - **Annotations** — `@hide`, `@deprecated`, `@name`, `@type` all wire
+//     through to the rendered PHP. `@coerce` / `@normalise` are PARSED but
+//     ignored in php-class (deferred to a future php-domain-class with
+//     PHP 8.4 property hooks).
+//
+// Pattern: `polyprism-php-class`.
+
+generator polyprismCodegen {
+  provider = "polyprism-php-class"
+  output   = "../generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Enums
+// ───────────────────────────────────────────────────────────────────────────
+
+/// Customer membership tier. Stored as a string in the DB; PHP enum
+/// values match the DB values one-for-one.
+enum CustomerTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  CANCELLED
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Models
+// ───────────────────────────────────────────────────────────────────────────
+
+/// A customer in the billing system. Demonstrates every supported scalar
+/// type, plus enum defaults, optional fields, and a one-to-many relation
+/// out to orders.
+model Customer {
+  id          String       @id @default(cuid())
+  email       String       @unique
+  /// Free-form display name. Optional because some flows create
+  /// customers from email-only signups.
+  displayName String?
+  tier        CustomerTier @default(FREE)
+  /// Lifetime spend in cents — kept as Decimal to preserve currency
+  /// precision across rate-conversion rounds. No PHP-emittable default
+  /// (Decimal defaults are deferred to a future renderer pass), so this
+  /// becomes a required constructor argument.
+  lifetimeSpendCents Decimal
+  /// Loyalty points; the trivial Int default exercises the literal path.
+  loyaltyPoints Int @default(0)
+  active        Boolean @default(true)
+  createdAt     DateTime @default(now())
+
+  orders Order[]
+
+  /// Internal hash — never serialise this back to the client.
+  /// @hide
+  passwordHash String
+}
+
+/// A single order placed by a customer. Demonstrates the self-reference
+/// pattern (a refunded order points back at its parent), every default
+/// shape, and BigInt for the external-system ID.
+model Order {
+  id            String      @id @default(cuid())
+  /// External order reference from the legacy system — BigInt because
+  /// the old system's IDs exceed 2^32.
+  externalId    BigInt
+  status        OrderStatus @default(PENDING)
+  /// Total in the currency's smallest unit (cents).
+  totalCents    Int
+  /// Exchange rate used at the time of order — Float because precision
+  /// beyond 6 places isn't required and float arithmetic is faster
+  /// than Decimal for downstream calculations.
+  exchangeRate  Float       @default(1.0)
+  /// Customer-facing notes; bytes column so the renderer covers the
+  /// binary-data path even though most real systems would use String.
+  receiptBlob   Bytes?
+  /// Free-form JSON payload from the upstream API. Falls back to `mixed`.
+  rawPayload    Json?
+  placedAt      DateTime    @default(now())
+  shippedAt     DateTime?
+
+  // 1-to-many: every order belongs to a customer.
+  customerId    String
+  customer      Customer    @relation(fields: [customerId], references: [id])
+
+  // Self-reference: a refund order points back at the original it refunds.
+  parentOrderId String?
+  parentOrder   Order?      @relation("OrderRefunds", fields: [parentOrderId], references: [id])
+  refunds       Order[]     @relation("OrderRefunds")
+}
