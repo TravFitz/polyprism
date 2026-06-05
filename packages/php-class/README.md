@@ -19,6 +19,8 @@ That's the whole API. Pair it with a composer.json psr-4 mapping and you're done
 }
 ```
 
+**Verified Composer-compliant.** Every emitted file passes `composer dump-autoload --strict-psr` with zero warnings — PolyPrism's CI runs that check on every push, alongside `php -l` for syntax and a drift check against the committed showcase output. No surprises when you wire it into your project.
+
 ## What it emits
 
 ```php
@@ -176,6 +178,38 @@ final class UserDomain
 ```
 
 Or add domain methods to a separate service class that accepts the DTO as a parameter. Both patterns survive schema regeneration without breakage.
+
+## JSON encoding caveat (`\DateTimeImmutable`)
+
+`json_encode($model)` walks the public typed properties of the generated class out of the box — strings, ints, floats, bools, enums (via their backing string), nested JsonType classes, and arrays all serialise to the natural wire shape. **The one ugly default is `\DateTimeImmutable`**: PHP serialises it as its verbose internal representation, not ISO 8601:
+
+```php
+$customer = new Customer(/* ... */);
+echo json_encode($customer);
+// {"id":"cust_1","email":"...","createdAt":{"date":"2026-06-05 06:13:25.097341","timezone_type":3,"timezone":"UTC"},...}
+```
+
+That shape is rarely what you want on the wire. The cleanest workaround for v0 is to implement `JsonSerializable` on a thin consumer-side wrapper that formats the `DateTimeImmutable` fields explicitly:
+
+```php
+final class CustomerWire implements JsonSerializable {
+    public function __construct(public readonly Customer $dto) {}
+
+    public function jsonSerialize(): array {
+        return [
+            'id' => $this->dto->id,
+            'email' => $this->dto->email,
+            'createdAt' => $this->dto->createdAt->format(\DATE_ATOM), // ISO 8601
+            // ...
+        ];
+    }
+}
+
+echo json_encode(new CustomerWire($customer));
+// {"id":"cust_1","email":"...","createdAt":"2026-06-05T06:13:25+00:00",...}
+```
+
+A future v0.2.x may emit `JsonSerializable::jsonSerialize()` on the generated class with an ISO-8601 default for DateTime fields — tracked as a known gap. Until then, the wrapper pattern above keeps the generated class regen-safe while letting you control the wire shape.
 
 ## Links
 
