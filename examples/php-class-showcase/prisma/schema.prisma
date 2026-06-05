@@ -97,7 +97,14 @@ model Order {
   /// Customer-facing notes; bytes column so the renderer covers the
   /// binary-data path even though most real systems would use String.
   receiptBlob   Bytes?
-  /// Free-form JSON payload from the upstream API. Falls back to `mixed`.
+  /// Inline-named JSON — emits to JsonTypes/ShippingDetails.php as a
+  /// final readonly value class. Exercises optional fields, nested
+  /// objects (PHPDoc array shape), and arrays of primitives.
+  /// @json(ShippingDetails = { carrier: string, tracking?: string, address: { line1: string, line2?: string, city: string, country: string }, tags: string[] })
+  shipping      Json
+  /// Inline-anonymous JSON — emits to JsonTypes/OrderRawPayload.php as
+  /// a final readonly value class. Auto-named from Model + Field.
+  /// @json({ source: string, raw: unknown, capturedAt: number })
   rawPayload    Json?
   placedAt      DateTime    @default(now())
   shippedAt     DateTime?

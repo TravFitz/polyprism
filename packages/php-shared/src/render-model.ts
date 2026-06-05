@@ -49,6 +49,10 @@ export interface RenderPhpModelOptions {
   readonly modelsNamespace: string;
   /** Root namespace for enum classes, e.g. `"Generated\\Enums"`. */
   readonly enumsNamespace: string;
+  /** Root namespace for generated JSON value classes, e.g. `"Generated\\JsonTypes"`. */
+  readonly jsonTypesNamespace: string;
+  /** Names of JSON value classes that were successfully generated this run. */
+  readonly jsonTypeClassNames: ReadonlySet<string>;
 }
 
 export interface RenderPhpModelResult {
@@ -57,7 +61,16 @@ export interface RenderPhpModelResult {
 }
 
 export function renderPhpModel(opts: RenderPhpModelOptions): RenderPhpModelResult {
-  const { model, ir, config, declarationStyle, modelsNamespace, enumsNamespace } = opts;
+  const {
+    model,
+    ir,
+    config,
+    declarationStyle,
+    modelsNamespace,
+    enumsNamespace,
+    jsonTypesNamespace,
+    jsonTypeClassNames,
+  } = opts;
   const issues: Diagnostic[] = [];
   const collectDiagnostic = (d: Diagnostic): void => {
     issues.push(d);
@@ -124,6 +137,8 @@ export function renderPhpModel(opts: RenderPhpModelOptions): RenderPhpModelResul
       enumFqnLookup,
       modelFqnLookup,
       selfModelFqn: selfFqn,
+      jsonTypesNamespace,
+      jsonTypeClassNames,
       onDiagnostic: collectDiagnostic,
     });
 

@@ -70,7 +70,7 @@ For setter-driven `@normalise` / `@coerce` data laundering (the PHP analog of `t
 | `DateTime` | `\DateTimeImmutable` | Always immutable — `\DateTime` is foot-bullet API |
 | `BigInt` | `int` | PHP `int` is 64-bit on every modern target. Set `@type("string", ...)` if you need values beyond `PHP_INT_MAX` |
 | `Decimal` | `string` | No native arbitrary-precision decimal in PHP — use `brick/math` or BCMath at the consumer |
-| `Json` | `mixed` | `@json(...)` falls back to `mixed` in v0 (PHP has no structural typing for anonymous objects) |
+| `Json` | `mixed` | Inline `@json({ ... })` / `@json(Name = { ... })` generates a typed value class — see [JSON value classes](#json-value-classes). Bare and with-path forms warn + fall back to `mixed` |
 | `Bytes` | `string` | PHP convention for binary data |
 | Enums | `EnumName` | Emits as PHP 8.1+ backed enum (`enum X: string`) |
 | Relations | `ClassName` | Cross-namespace targets get a `use` statement |
@@ -86,7 +86,57 @@ For setter-driven `@normalise` / `@coerce` data laundering (the PHP analog of `t
 | `@name(NewName)` | Renames the class / property identifier |
 | `@type("\\Brick\\Math\\BigDecimal")` | Overrides the PHP type expression verbatim |
 | `@coerce` / `@normalise` / `@noCoerce` | Recognised but ignored (deferred to `php-domain-class`) |
-| `@json(...)` | Warning + falls back to `mixed` |
+| `@json({ ... })` / `@json(Name = { ... })` | Generates a `final readonly class` under `JsonTypes/` and types the field as that class — see [JSON value classes](#json-value-classes) |
+| `@json(SomeType)` / `@json(SomeType from "./path")` | Warning + falls back to `mixed`. TS module imports don't translate to PHP; use `@type` instead |
+
+## JSON value classes
+
+Inline `@json` shapes generate a typed PHP class under `JsonTypes/`:
+
+```prisma
+/// @json(ShippingDetails = { carrier: string, tracking?: string, address: { line1: string, city: string }, tags: string[] })
+shipping Json
+```
+
+```php
+// Generated/JsonTypes/ShippingDetails.php
+final readonly class ShippingDetails
+{
+    public function __construct(
+        public string $carrier,
+        /** @var array{line1: string, city: string} */
+        public array $address,
+        /** @var array<int, string> */
+        public array $tags,
+        public ?string $tracking = null,
+    ) {}
+}
+```
+
+**TS → PHP type mapping** inside @json shapes:
+
+| TS | PHP | PHPDoc enhancement |
+|---|---|---|
+| `string` | `string` | — |
+| `number` | `float` | — (PHP `float` accepts ints by widening) |
+| `boolean` | `bool` | — |
+| `unknown` / `any` | `mixed` | — |
+| `T[]` (primitive `T`) | `array` | `@var array<int, T>` |
+| `{ k: T, ... }` (nested) | `array` | `@var array{k: T, ...}` |
+| `name?: type` (optional) | `?type = null` | — |
+
+**Unsupported in v0** — warns + falls back to `mixed`:
+
+- Unions (`string | number`)
+- Generics (`Record<K, V>`, `Map<K, V>`, etc.)
+- Identifier references inside an inline shape (`{ items: SomeOtherType }`)
+- Tuples, intersections, discriminated unions
+
+For richer typing, use `@type("\\App\\YourType")` to point at a hand-written PHP class.
+
+The generated value class is **always `readonly`** regardless of whether the parent model is `php-class` or `php-readonly`. JSON blobs are value-object-shaped by nature — you swap the whole object, you don't scribble on individual fields.
+
+Files land under `<outputDir>/JsonTypes/<Name>.php` with the namespace `Generated\JsonTypes` by default. Configurable via the `jsonTypesNamespace` option when wiring `emitPhpModels` directly.
 
 ## Defaults
 

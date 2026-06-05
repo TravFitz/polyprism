@@ -309,13 +309,56 @@ PHP scalar mapping: `String → string`, `Int → int`, `Float → float`,
 (PHP `int` is 64-bit on every modern target — set `@type("string", ...)`
 on a field if you need to round-trip values beyond `PHP_INT_MAX`),
 `Decimal → string` (use `brick/math` or BCMath at the consumer to
-operate on the values), `Json → mixed`, `Bytes → string`. Enums emit as
-PHP 8.1+ backed enums (`enum Role: string { case ADMIN = 'ADMIN'; }`).
+operate on the values), `Json → mixed` (unless typed via `@json` — see
+below), `Bytes → string`. Enums emit as PHP 8.1+ backed enums
+(`enum Role: string { case ADMIN = 'ADMIN'; }`).
 
-`@hide`, `@deprecated`, `@name`, and `@type` work the same way they do
-in the TypeScript family. `@coerce` / `@normalise` / `@noCoerce` are
-parsed but ignored in v0 — those are property-hook features that need
-PHP 8.4 and will ship as a future `@polyprism/php-domain-class`.
+`@hide`, `@deprecated`, `@name`, `@type`, and `@json` (inline forms)
+work the same way they do in the TypeScript family. For inline `@json`
+shapes, PolyPrism generates a `final readonly class` under
+`<outputDir>/JsonTypes/<Name>.php` and types the Json field as that
+class:
+
+```prisma
+/// @json(BillingAddress = { street: string, city: string, country: string })
+address Json
+```
+
+```php
+// Generated/JsonTypes/BillingAddress.php
+final readonly class BillingAddress {
+    public function __construct(
+        public string $street,
+        public string $city,
+        public string $country,
+    ) {}
+}
+
+// Generated/Models/User.php
+use Generated\JsonTypes\BillingAddress;
+final class User {
+    public function __construct(
+        public BillingAddress $address,
+    ) {}
+}
+```
+
+Supported `@json` shapes: primitives (`string`, `number → float`,
+`boolean`, `unknown`/`any → mixed`), arrays of primitives
+(`tags: string[]` → PHP `array` + PHPDoc `array<int, string>`), nested
+objects (PHPDoc `array{...}` shape on a plain `array` property — no
+sub-classes spawned), and `name?: type` optional markers. Anything
+outside that subset (unions, generics, identifier references) emits a
+warning and falls back to `mixed` — use `@type("\\App\\YourType")` to
+point at a hand-written PHP class for richer typing.
+
+Bare (`@json(SomeType)`) and with-path (`@json(SomeType from "./path")`)
+forms warn and fall back to `mixed` — they trust TypeScript module
+imports that don't translate to PHP autoloading. Use `@type` instead.
+
+`@coerce` / `@normalise` / `@noCoerce` are parsed but ignored in v0 —
+those are property-hook features that need PHP 8.4 and will ship as a
+future `@polyprism/php-domain-class`.
 
 Both PHP classes are emitted as `final`. That's deliberate: regenerated
 DTOs whose shape can change with the schema shouldn't be silently broken
