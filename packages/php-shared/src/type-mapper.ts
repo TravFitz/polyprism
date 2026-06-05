@@ -68,8 +68,13 @@ function mapBasePhpType(opts: PhpTypeMapperOptions): string {
   if (field.annotations.type) {
     // PHP's @type ignores the import-path side of the annotation — the user
     // is responsible for namespace correctness, same way the bare `@json(X)`
-    // form works in the TS family.
-    return field.annotations.type.typeName;
+    // form works in the TS family. We DO strip a leading `?` from the
+    // override so that combining `@type("?Foo")` with an optional-typed
+    // field doesn't produce `??Foo` after wrapNullability prepends its own.
+    // The user's leading `?` reads as intent ("this might be null"), and
+    // wrapNullability will reapply it for optional fields anyway.
+    const overrideType = field.annotations.type.typeName;
+    return overrideType.startsWith("?") ? overrideType.slice(1).trimStart() : overrideType;
   }
 
   // (2) @json on Json field — unsupported in PHP for v0; warn and fall back.

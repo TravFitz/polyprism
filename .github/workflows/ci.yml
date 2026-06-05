@@ -167,3 +167,25 @@ jobs:
                 --noEmit
             echo "::endgroup::"
           done
+
+      # PHP showcase: parse-check every emitted .php file with `php -l`, then
+      # verify the regenerated output didn't drift from what's committed. The
+      # drift check is the PHP-side equivalent of the TS typecheck — it
+      # catches "renderer changed shape but committed showcase didn't get
+      # updated" the same way TS errors catch "generated TS no longer
+      # compiles after a renderer change".
+      - name: Set up PHP for showcase lint
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+
+      - name: Lint emitted PHP + check committed showcase is current
+        run: |
+          set -e
+          echo "::group::php -l every emitted .php file"
+          find examples/php-class-showcase/generated -name "*.php" -type f -print0 \
+            | xargs -0 -n1 php -l
+          echo "::endgroup::"
+          echo "::group::Drift check (regenerated output must match committed)"
+          git diff --exit-code examples/php-class-showcase/generated
+          echo "::endgroup::"
