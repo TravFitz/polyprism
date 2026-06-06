@@ -1,6 +1,6 @@
 {
   "name": "@polyprism/php-readonly",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Prisma 6 & 7 generator that emits PHP 8.2+ `final readonly class` value objects from your schema. Immutable DTOs with constructor property promotion. Pure ESM, zero runtime deps. Part of PolyPrism.",
   "type": "module",
   "license": "MIT",
