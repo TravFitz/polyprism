@@ -17,7 +17,7 @@
 //   - empty string (no doc, no tags, no extras → no block)
 //   - a multi-line `/** ... */` block ending with a newline
 
-import type { AnnotationSet, NativeType } from "@polyprism/core";
+import type { AnnotationSet, FieldDef, NativeType } from "@polyprism/core";
 
 export interface RenderPhpDocOptions {
   /** Number of leading spaces before each `*` line. 0 for top-level, 4 for class members. */
@@ -60,4 +60,22 @@ export function buildNativeTypeTag(nativeType: NativeType | null): string | null
   if (!nativeType) return null;
   const args = nativeType.args.join(", ");
   return args ? `@db.${nativeType.name}(${args})` : `@db.${nativeType.name}`;
+}
+
+/**
+ * Per-field PHPDoc extra-tag set: a `@var array<int, T>` PHPStan-shaped
+ * narrowing for list types (because PHP's native `array` doesn't carry an
+ * element type), plus any `@db.X(...)` native-type tag the field carries.
+ *
+ * Shared between `render-model.ts` (php-class / php-readonly) and
+ * `render-domain-class.ts` so both renderers emit the same field metadata.
+ */
+export function collectFieldExtraTags(field: FieldDef, listElementDoc: string | null): string[] {
+  const tags: string[] = [];
+  if (listElementDoc !== null) {
+    tags.push(`@var array<int, ${listElementDoc}>`);
+  }
+  const nativeTag = buildNativeTypeTag(field.nativeType);
+  if (nativeTag) tags.push(nativeTag);
+  return tags;
 }

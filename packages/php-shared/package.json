@@ -1,7 +1,7 @@
 {
   "name": "@polyprism/php-shared",
   "version": "0.2.0",
-  "description": "Shared PHP rendering primitives used by PolyPrism's Prisma 6 & 7 PHP generators (php-class, php-readonly). Pure ESM.",
+  "description": "Shared PHP rendering primitives used by PolyPrism's Prisma 6 & 7 PHP generators (php-class, php-readonly, php-domain-class). Pure ESM.",
   "type": "module",
   "license": "MIT",
   "author": "Travis Fitzgerald",

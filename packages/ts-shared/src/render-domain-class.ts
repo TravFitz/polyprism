@@ -48,7 +48,12 @@ import type {
   PolyPrismIR,
   ScalarType,
 } from "@polyprism/core";
-import { resolveFieldIdent, resolveTypeFilename, resolveTypeIdent } from "@polyprism/core";
+import {
+  buildEnumIdentLookup,
+  buildModelIdentLookup,
+  resolveFieldIdent,
+  resolveTypeFilename,
+} from "@polyprism/core";
 
 import {
   type CoerceDecision,
@@ -113,26 +118,8 @@ interface FieldPlan {
 export function renderDomainClass(opts: RenderDomainClassOptions): RenderDomainClassResult {
   const { model, ir, config } = opts;
 
-  const enumLookup = new Map<string, string>(
-    ir.enums.map((e) => [
-      e.name,
-      resolveTypeIdent({
-        schemaName: e.name,
-        override: e.annotations.name,
-        convention: config.naming.typeNaming,
-      }),
-    ]),
-  );
-  const modelLookup = new Map<string, string>(
-    ir.models.map((m) => [
-      m.name,
-      resolveTypeIdent({
-        schemaName: m.name,
-        override: m.annotations.name,
-        convention: config.naming.typeNaming,
-      }),
-    ]),
-  );
+  const enumLookup = buildEnumIdentLookup(ir, config);
+  const modelLookup = buildModelIdentLookup(ir, config);
 
   const selfIdent = modelLookup.get(model.name) ?? model.name;
   const imports = new ImportCollector();

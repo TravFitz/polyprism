@@ -125,7 +125,7 @@ export interface User {
 }
 ```
 
-## The six patterns, side-by-side
+## The seven patterns, side-by-side
 
 Same model. Swap the provider. That's it.
 
@@ -284,13 +284,78 @@ final readonly class User
 
 </td>
 </tr>
+<tr>
+<th align="left" colspan="2"><code>polyprism-php-domain-class</code> (PHP 8.4+)</th>
+</tr>
+<tr>
+<td colspan="2">
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Generated\Models;
+
+use Generated\Enums\Role;
+use Polyprism\Runtime\Coerce;
+use Polyprism\Runtime\Normalise;
+
+final class User
+{
+    public string $id;
+
+    public string $email {
+        set(string $value) {
+            $this->email = Normalise::apply($value, [Normalise::TRIM, Normalise::LOWERCASE]);
+        }
+    }
+
+    public ?string $name = null;
+
+    public Role $role = Role::MEMBER;
+
+    public int $points = 0 {
+        set(int|string $value) {
+            $this->points = Coerce::int($value, 'User.points');
+        }
+    }
+
+    public function __construct(
+        string $id,
+        string $email,
+        ?string $name = null,
+        Role $role = Role::MEMBER,
+        int|string $points = 0,
+    ) {
+        $this->id = $id;
+        $this->email = $email;
+        $this->name = $name;
+        $this->role = $role;
+        $this->points = $points;
+    }
+}
+```
+
+</td>
+</tr>
 </table>
 
-Both PHP patterns use **constructor property promotion** — the canonical
-PHP 8 shorthand that declares properties and accepts constructor
-parameters in a single block. `php-class` is mutable (`$user->email = 'x'`
-works); `php-readonly` is immutable after construction and is the
-idiomatic shape for DTOs and value objects.
+`php-class` and `php-readonly` use **constructor property promotion** —
+the canonical PHP 8 shorthand that declares properties and accepts
+constructor parameters in a single block. `php-class` is mutable
+(`$user->email = 'x'` works); `php-readonly` is immutable after
+construction and is the idiomatic shape for DTOs and value objects.
+
+`php-domain-class` is the PHP equivalent of `ts-domain-class`: PHP 8.4
+**property hooks** wrap each default-coerce scalar in a `set` block that
+routes assignment through [`polyprism/runtime`](packages/runtime-php)'s
+`Coerce::int(...)` / `Normalise::apply(...)` helpers. Stringified
+boundary input (HTTP bodies, form posts, queue messages) lands cleanly
+in `int` / `\DateTimeImmutable` / etc. without `(int)` casts at every
+call site. The trade: it requires PHP 8.4 and one extra Composer
+dependency — `composer require polyprism/runtime`. The other two PHP
+patterns stay zero-dep.
 
 Generated files land under `<outputDir>/Models/User.php` and
 `<outputDir>/Enums/Role.php`. The default namespace is `Generated\Models`
@@ -310,14 +375,16 @@ and `Generated\Enums`; wire it into `composer.json` autoload:
 |---|---|---|
 | `@polyprism/php-class` | **8.1** | Backed enums (`enum X: string`), `new \DateTimeImmutable()` in default param values (the "new in initializers" RFC), enum-case defaults (`Role::MEMBER`), the `mixed` type, constructor property promotion |
 | `@polyprism/php-readonly` | **8.2** | Everything above plus the class-level `readonly` modifier (per-property `readonly` exists in 8.1, but `final readonly class` is 8.2) |
+| `@polyprism/php-domain-class` | **8.4** | Property hooks — the load-bearing feature for setter-driven `@coerce` / `@normalise`. There's no point targeting older PHP; hooks are the whole point. |
 
-No upper limit — emitted code is forward-compatible through PHP 8.3, 8.4 (deprecates optional-before-required, which we already sort around), and the planned 9.0. PHP 8.1's security support ended 2025-12; we still target it as the floor because much of the active Composer ecosystem hasn't yet moved. CI lints every emitted file under both 8.1 (floor) and 8.2 (current target) on every push.
+No upper limit — emitted code is forward-compatible through PHP 8.3, 8.4 (deprecates optional-before-required, which we already sort around), and the planned 9.0. PHP 8.1's security support ended 2025-12; we still target it as the floor for `php-class` because much of the active Composer ecosystem hasn't yet moved. CI lints every emitted file under 8.1, 8.2, AND 8.4 on every push — each floor's showcase tested at its own PHP version.
 
-**Verified Composer-compliant.** Every push to this repo runs four PHP-side gates against the committed showcase output:
-- `php -l` under PHP 8.1 (the php-class floor) and PHP 8.2 (the php-readonly floor) — pure syntax check, no surprises by version.
-- `composer dump-autoload --strict-psr` — file-name / namespace / directory layout must all align with PSR-4 or the build fails.
-- A smoke script (`examples/php-class-showcase/scripts/smoke.php`) that autoloads through Composer, instantiates every generated class, exercises `final readonly` enforcement, verifies `@hide` actually omits the field from the constructor signature, and round-trips `json_encode`.
-- A drift check that regenerates the showcase and `git diff --exit-code`s the result against the committed version — so the renderer can't quietly drift away from what the docs claim.
+**Verified Composer-compliant.** Every push to this repo runs the PHP-side gates against the committed showcase output:
+- `php -l` under PHP 8.1 (the php-class floor), PHP 8.2 (the php-readonly floor), and PHP 8.4 (the php-domain-class floor) — pure syntax check, no surprises by version.
+- `composer dump-autoload --strict-psr` for each showcase — file-name / namespace / directory layout must all align with PSR-4 or the build fails.
+- A smoke script per pattern (`examples/php/class-showcase/scripts/smoke.php` + `examples/php/domain-class-showcase/scripts/smoke.php`) that autoloads through Composer, instantiates every generated class, exercises pattern-specific contracts (`final readonly` enforcement for php-class; property-hook firing + `Coerce`/`Normalise` end-to-end for php-domain-class), verifies `@hide` actually omits the field, and round-trips `json_encode`.
+- A drift check that regenerates each showcase and `git diff --exit-code`s the result against the committed version — so the renderer can't quietly drift away from what the docs claim.
+- A PHPUnit run against `polyprism/runtime` (the Composer-published runtime helpers).
 
 PHP scalar mapping: `String → string`, `Int → int`, `Float → float`,
 `Boolean → bool`, `DateTime → \DateTimeImmutable`, `BigInt → int`
@@ -371,9 +438,11 @@ Bare (`@json(SomeType)`) and with-path (`@json(SomeType from "./path")`)
 forms warn and fall back to `mixed` — they trust TypeScript module
 imports that don't translate to PHP autoloading. Use `@type` instead.
 
-`@coerce` / `@normalise` / `@noCoerce` are parsed but ignored in v0 —
-those are property-hook features that need PHP 8.4 and will ship as a
-future `@polyprism/php-domain-class`.
+`@coerce` / `@normalise` / `@noCoerce` are honoured by
+`@polyprism/php-domain-class` via PHP 8.4 property hooks (see the
+domain-class example above). `php-class` and `php-readonly` recognise
+the annotations but ignore them — neither pattern emits the hook
+machinery to fire them.
 
 Both PHP classes are emitted as `final`. That's deliberate: regenerated
 DTOs whose shape can change with the schema shouldn't be silently broken
@@ -393,9 +462,9 @@ All annotations live in Prisma triple-slash doc comments (`///`).
 | `@json(Type)` | Brand a `Json` field with a TypeScript type. See [4 forms](#json-annotation--four-forms) below. |
 | `@type(MyType from "./path")` | Override the inferred TS type. The `from "./path"` half is optional. |
 | `@name(NewIdent)` | Rename the emitted identifier for a model/enum/field (escapes global casing). |
-| `@normalise(trim, lowercase, uppercase, nullEmptyToNull)` | Apply string-normalisation ops on assignment (`ts-domain-class` only). Parsed but ignored by the other three patterns. |
-| `@coerce(target)` | Override the default coercion for a field (`ts-domain-class` only — `String @coerce(int)` etc). |
-| `@noCoerce` | Opt a default-coerce field (`Int`, `Float`, `Decimal`, `BigInt`, `DateTime`) out of widened setter input on `ts-domain-class`. |
+| `@normalise(trim, lowercase, uppercase, nullEmptyToNull)` | Apply string-normalisation ops on assignment. Honoured by `ts-domain-class` and `php-domain-class`. Recognised but ignored by the other patterns. |
+| `@coerce(target)` | Override the default coercion for a field (e.g. `String @coerce(int)` on a stringified-int column). Honoured by `ts-domain-class` and `php-domain-class`. |
+| `@noCoerce` | Opt a default-coerce field (`Int`, `Float`, `Decimal`, `BigInt`, `DateTime`) out of widened setter input on `ts-domain-class` / `php-domain-class`. |
 
 ### `@json` annotation — four forms
 
@@ -459,46 +528,66 @@ global rule for that one identifier.
 
 ## Examples
 
-Five example schemas live in `examples/` — each picks a different pattern
-and a different complexity tier:
+Six example schemas live in `examples/`, organised by language. Each picks
+a different pattern and complexity tier:
 
-- **[`examples/simple-blog/`](examples/simple-blog)** — minimal, zero
+**TypeScript (`examples/ts/`)**
+
+- **[`examples/ts/simple-blog/`](examples/ts/simple-blog)** — minimal, zero
   annotations, uses `ts-type`. The "what does zero-config look like" tour.
-- **[`examples/task-tracker/`](examples/task-tracker)** — mid-weight Kanban
-  schema using `ts-class`. Showcases initializer expressions and the mixed
-  type-vs-value imports needed when enum values appear as defaults. (The
-  class emitter is also scalar-kind-aware about literal defaults — see
+- **[`examples/ts/task-tracker/`](examples/ts/task-tracker)** — mid-weight
+  Kanban schema using `ts-class`. Showcases initializer expressions and the
+  mixed type-vs-value imports needed when enum values appear as defaults.
+  (The class emitter is also scalar-kind-aware about literal defaults — see
   `formatLiteralDefault` in `packages/ts-shared/src/render-model.ts` — so
   mismatched literals like an `Int` default on a `DateTime` field fall
   through to `!` rather than producing an `Invalid Date`.)
-- **[`examples/complex-ecommerce/`](examples/complex-ecommerce)** — kitchen
-  sink using `ts-interface`. Every scalar type, all 4 `@json` forms, `@hide`,
-  `@deprecated`, `@name` override, self-referential relations, composite
-  unique indexes, `@db.*` native types.
-- **[`examples/domain-class-showcase/`](examples/domain-class-showcase)** —
-  billing/orders schema using `ts-domain-class`. Exercises every default-coerce
-  type, every `@normalise` op, `@noCoerce`, `@coerce(target)`, inline `@json`,
-  relations (1-to-1, 1-to-many, self-reference), and the `Init`-interface
-  required-vs-optional split. The generated output is committed to git so
-  you can diff schema changes against emitted code without running the
-  generator yourself.
-- **[`examples/php-class-showcase/`](examples/php-class-showcase)** —
+- **[`examples/ts/complex-ecommerce/`](examples/ts/complex-ecommerce)** —
+  kitchen sink using `ts-interface`. Every scalar type, all 4 `@json` forms,
+  `@hide`, `@deprecated`, `@name` override, self-referential relations,
+  composite unique indexes, `@db.*` native types.
+- **[`examples/ts/domain-class-showcase/`](examples/ts/domain-class-showcase)**
+  — billing/orders schema using `ts-domain-class`. Exercises every
+  default-coerce type, every `@normalise` op, `@noCoerce`, `@coerce(target)`,
+  inline `@json`, relations (1-to-1, 1-to-many, self-reference), and the
+  `Init`-interface required-vs-optional split. The generated output is
+  committed to git so you can diff schema changes against emitted code
+  without running the generator yourself.
+
+**PHP (`examples/php/`)**
+
+- **[`examples/php/class-showcase/`](examples/php/class-showcase)** —
   billing/orders schema using `php-class`. Mirrors the domain-class shape
   on the PHP side: every PHP scalar mapping, enums with defaults, 1-to-many
   + self-referencing relations, every default kind (literal, enum case,
   `now()`, unrepresentable `cuid()`), and the annotation set (`@hide`,
   `@deprecated`, `@name`, `@type`, and the `@json` warning-and-fallback).
   Generated output committed to git.
+- **[`examples/php/domain-class-showcase/`](examples/php/domain-class-showcase)**
+  — billing/orders schema using `php-domain-class`. Exercises every
+  default-coerce target via PHP 8.4 property hooks, every `@normalise` op,
+  `@noCoerce`, cross-type `@coerce(target)`, inline `@json`, and the
+  end-to-end Composer-runtime install path verified by the smoke script.
 
 ## Roadmap
 
 | Version | State | Adds |
 |---|---|---|
 | **0.1** | shipped | `ts-interface`, `ts-type`, `ts-class`, **`ts-domain-class`** (with setter-driven `@normalise`/`@coerce`, `from()`, `toJSON()`, fluent builder), `@polyprism/runtime` helpers, 8 annotations, three-axis naming, enum + JSON-type file emission |
-| **0.2** | next | **PHP emitter family** — `php-class` (PHP 8.1+) and `php-readonly` (PHP 8.2+). Constructor property promotion, PHP 8.1+ backed enums, typed `@json` value classes under `JsonTypes/`, PSR-4-compatible file layout. Diagnostic-surface polish on the TS family (emit-time issues flowing through a proper reporter instead of being silently dropped) also lands in this release. |
-| 0.3 | planned | `ts-zod` — Zod schema emission, sharing the same naming and annotation pipeline as the type-shape patterns. Also: `php-domain-class` with PHP 8.4 property hooks + a Composer-published `polyprism/runtime` for setter-driven `@coerce`/`@normalise` on PHP. |
+| **0.2** | shipped | **PHP emitter family** — `php-class` (PHP 8.1+) and `php-readonly` (PHP 8.2+). Constructor property promotion, PHP 8.1+ backed enums, typed `@json` value classes under `JsonTypes/`, PSR-4-compatible file layout. Diagnostic-surface polish on the TS family (emit-time issues flowing through a proper reporter instead of being silently dropped) also lands in this release. |
+| **0.2.1** | shipped | **`php-domain-class`** (PHP 8.4+) — property-hook setters drive `@coerce` / `@normalise` on the PHP side, completing the deferred half of the PHP family. Backed by a new Composer-published [`polyprism/runtime`](packages/runtime-php) package (PHP equivalent of `@polyprism/runtime`). Cross-type `@coerce(target)` correctly types the storage slot to the coerce target's PHP type (so `String @coerce(int)` stores `int`, not `string`). |
+| 0.3 | planned | `ts-zod` — Zod schema emission, sharing the same naming and annotation pipeline as the type-shape patterns. Possibly `php-interface` if real demand surfaces (PHP 8.4 abstract property declarations on interfaces — see "Why the PHP family has 3 patterns, not 4" below). |
 | 1.0 | planned | Docs site, JSON-Schema-validated config, public stability commitment on the emitter API |
 | Later | — | `ts-valibot`, `ts-arktype`, `ts-typebox`, `ts-effect-schema`, `ts-standard-schema`, Go and Rust emitter families |
+
+### Why the PHP family has 3 patterns, not 4
+
+The TS family ships four emitters (`ts-interface`, `ts-type`, `ts-class`, `ts-domain-class`); the PHP family ships three. The asymmetry is intentional, not a backlog:
+
+- **`php-type` isn't possible.** PHP has no type-alias syntax. There's no `type Foo = ...` construct in the language. PHPStan/Psalm offer `@phpstan-type` docblocks, but those are static-analyser-only and not enforced at runtime — emitting them as a "type emitter" would be misleading about what the package delivers.
+- **`php-interface` is possible but solves a problem PHP devs don't typically have.** PHP 8.4 added abstract property declarations on interfaces (`interface User { public string $id { get; } }`), which would let us emit shape-contract interfaces analogous to `ts-interface`. The reason it's not shipped: TS interfaces are the idiomatic shape for DTOs in TypeScript, but PHP interfaces are *behavioral* contracts almost always paired with implementations — the idiomatic PHP DTO is a `final readonly class`, which `php-readonly` already covers. A `php-interface` emitter would solve a niche use case (multi-implementation dispatch, test doubles) that the existing `final readonly class` shape doesn't already serve well. Deferred until a real user asks for it.
+
+If you have a use case that argues for either, [file an issue](https://github.com/TravFitz/polyprism/issues) — the design discussion is the bottleneck, not the implementation effort.
 
 ## Contributing
 

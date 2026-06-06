@@ -3,115 +3,25 @@
 // assertions on the rendered output; snapshot tests live in
 // emit-snapshot.test.ts for full-string contracts.
 
-import {
-  type AnnotationSet,
-  createInMemoryFileWriter,
-  DEFAULT_NAMING,
-  type DefaultValue,
-  type EnumDef,
-  emptyAnnotationSet,
-  type FieldDef,
-  type FieldType,
-  type GeneratorContext,
-  type ModelDef,
-} from "@polyprism/core";
+import type { AnnotationSet } from "@polyprism/core";
+import { emptyAnnotationSet } from "@polyprism/core";
 import { describe, expect, it } from "vitest";
 
 import { emitPhpModels } from "../src/emit-models.js";
-
-interface FieldOverrides {
-  isList?: boolean;
-  isRequired?: boolean;
-  hasDefaultValue?: boolean;
-  default?: DefaultValue | null;
-  annotations?: AnnotationSet;
-  documentation?: string;
-}
-
-function field(name: string, type: FieldType, o: FieldOverrides = {}): FieldDef {
-  return {
-    name,
-    dbName: null,
-    type,
-    isList: o.isList ?? false,
-    isRequired: o.isRequired ?? true,
-    isUnique: false,
-    isId: false,
-    isUpdatedAt: false,
-    hasDefaultValue: o.hasDefaultValue ?? false,
-    default: o.default ?? null,
-    documentation: o.documentation ?? null,
-    annotations: o.annotations ?? emptyAnnotationSet(o.documentation ?? null),
-    nativeType: null,
-  };
-}
-
-function scalar(
-  s: "String" | "Int" | "Float" | "Boolean" | "DateTime" | "BigInt" | "Decimal" | "Json" | "Bytes",
-): FieldType {
-  return { kind: "scalar", scalar: s };
-}
-
-function enumRef(name: string): FieldType {
-  return { kind: "enum", enumName: name };
-}
-
-function relation(modelName: string): FieldType {
-  return {
-    kind: "relation",
-    modelName,
-    relationName: null,
-    relationFromFields: [],
-    relationToFields: [],
-    onDelete: null,
-    onUpdate: null,
-  };
-}
-
-function model(name: string, fields: FieldDef[]): ModelDef {
-  return {
-    name,
-    dbName: null,
-    documentation: null,
-    fields,
-    primaryKey: null,
-    uniqueIndexes: [],
-    indexes: [],
-    annotations: emptyAnnotationSet(null),
-  };
-}
-
-function enumDef(name: string, values: string[]): EnumDef {
-  return {
-    name,
-    dbName: null,
-    documentation: null,
-    values: values.map((v) => ({
-      name: v,
-      dbName: null,
-      documentation: null,
-      annotations: emptyAnnotationSet(null),
-    })),
-    annotations: emptyAnnotationSet(null),
-  };
-}
-
-function makeContext(models: ModelDef[], enums: EnumDef[] = []) {
-  const writer = createInMemoryFileWriter();
-  const ctx: GeneratorContext = {
-    ir: { models, enums },
-    config: { naming: DEFAULT_NAMING, emitIndex: false },
-    outputDir: "/v",
-    writer,
-  };
-  return { ctx, writer };
-}
-
-const litInt = (v: number): DefaultValue => ({ kind: "literal", value: v });
-const litStr = (v: string): DefaultValue => ({ kind: "literal", value: v });
-const litBool = (v: boolean): DefaultValue => ({ kind: "literal", value: v });
-const nowDefault = (): DefaultValue => ({ kind: "function", name: "now", args: [] });
-const cuidDefault = (): DefaultValue => ({ kind: "function", name: "cuid", args: [] });
+import {
+  cuidDefault,
+  enumDef,
+  enumRef,
+  field,
+  litBool,
+  litInt,
+  litStr,
+  makeContext,
+  model,
+  nowDefault,
+  relation,
+  scalar,
+} from "./test-helpers.js";
 
 describe("php-class — file scaffolding", () => {
   it("emits PHP open tag, strict_types declaration, and namespace", async () => {

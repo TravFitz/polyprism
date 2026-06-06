@@ -131,7 +131,7 @@ model Task {
 
 ```bash
 pnpm install         # from the repo root
-pnpm -F polyprism-example-task-tracker generate
+pnpm -F polyprism-example-ts-task-tracker generate
 ```
 
 Generated files appear in `generated/`:

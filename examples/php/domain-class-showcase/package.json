@@ -1,0 +1,18 @@
+{
+  "name": "polyprism-example-php-domain-class-showcase",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Showcase example for php-domain-class — exercises every coerce-by-default target (Int/Float/Decimal/BigInt/DateTime), every @normalise op, @noCoerce, @coerce(target), @hide, JSON types, relations. Uses PHP 8.4 property hooks + the polyprism/runtime Composer package.",
+  "type": "module",
+  "scripts": {
+    "generate": "prisma generate",
+    "clean": "rm -rf generated"
+  },
+  "dependencies": {
+    "@polyprism/php-domain-class": "workspace:*",
+    "@prisma/client": "^6.19.3"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.3"
+  }
+}

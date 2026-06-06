@@ -29,9 +29,10 @@
 //     generated class name. Bare and with-path forms emit a warning and
 //     fall back to `mixed` (PHP has no equivalent of TS module imports).
 //
-// Annotations recognised but ignored (intentional v0 scope):
+// Annotations recognised but ignored for `class` / `readonly` styles:
 //   - @coerce / @normalise / @noCoerce — domain-class concepts that need
-//     PHP 8.4 property hooks + a runtime helper. Will land as php-domain-class.
+//     PHP 8.4 property hooks + the `polyprism/runtime` Composer helper.
+//     Honoured by the `domain-class` style (php-domain-class generator).
 //
 // Errors propagate the same way the ts-shared pipeline does: per-issue
 // onDiagnostic callback (defaults to stderr), accumulate error-severity
@@ -168,8 +169,10 @@ export async function emitPhpModels(
       // JsonType readonly syntax follows the parent's declaration style —
       // per-property `readonly` for `php-class` (PHP 8.1 floor) so we don't
       // silently emit 8.2-only `final readonly class` syntax from an 8.1-
-      // documented package. Same semantics either way.
-      declarationStyle: opts.declarationStyle,
+      // documented package. `php-readonly` (8.2+) and `php-domain-class`
+      // (8.4+) both clear the 8.2 bar, so they get the cleaner class-level
+      // modifier. Same value-class semantics either way.
+      declarationStyle: opts.declarationStyle === "class" ? "class" : "readonly",
     });
     for (const issue of issues) emit(issue);
     if (source.length === 0) {

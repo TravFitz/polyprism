@@ -30,15 +30,22 @@
 //     already produces the right shape for public-property classes; the
 //     opaque-property cases live in php-domain-class anyway.
 
-import type { FieldDef, ModelDef, PolyPrismConfig, PolyPrismIR } from "@polyprism/core";
-import { resolveFieldIdent, resolveTypeIdent } from "@polyprism/core";
+import type { ModelDef, PolyPrismConfig, PolyPrismIR } from "@polyprism/core";
+import {
+  buildEnumIdentLookup,
+  buildModelIdentLookup,
+  resolveFieldIdent,
+  resolveTypeIdent,
+} from "@polyprism/core";
 
+import { formatPhpDefault } from "./defaults.js";
 import type { Diagnostic } from "./diagnostics.js";
-import { buildNativeTypeTag, renderPhpDoc } from "./phpdoc.js";
+import { collectFieldExtraTags, renderPhpDoc } from "./phpdoc.js";
+import { renderPhpDomainClass } from "./render-domain-class.js";
 import { mapFieldPhpType } from "./type-mapper.js";
 import { UseCollector } from "./use-collector.js";
 
-export type PhpDeclarationStyle = "class" | "readonly";
+export type PhpDeclarationStyle = "class" | "readonly" | "domain-class";
 
 export interface RenderPhpModelOptions {
   readonly model: ModelDef;
@@ -71,6 +78,23 @@ export function renderPhpModel(opts: RenderPhpModelOptions): RenderPhpModelResul
     jsonTypesNamespace,
     jsonTypeClassNames,
   } = opts;
+
+  // The "domain-class" style is a fundamentally different shape (property
+  // hooks, no constructor property promotion, runtime helpers) — delegate
+  // to its dedicated renderer rather than branching deeply through the
+  // promoted-property path below.
+  if (declarationStyle === "domain-class") {
+    return renderPhpDomainClass({
+      model,
+      ir,
+      config,
+      modelsNamespace,
+      enumsNamespace,
+      jsonTypesNamespace,
+      jsonTypeClassNames,
+    });
+  }
+
   const issues: Diagnostic[] = [];
   const collectDiagnostic = (d: Diagnostic): void => {
     issues.push(d);
@@ -79,26 +103,8 @@ export function renderPhpModel(opts: RenderPhpModelOptions): RenderPhpModelResul
   // Pre-resolve PHP class identifiers + FQNs for all enums and models. The
   // type-mapper consults these maps; only the FQN form is registered with
   // the use collector if a cross-namespace reference is needed.
-  const enumFqnLookup = new Map<string, string>(
-    ir.enums.map((e) => [
-      e.name,
-      `${enumsNamespace}\\${resolveTypeIdent({
-        schemaName: e.name,
-        override: e.annotations.name,
-        convention: config.naming.typeNaming,
-      })}`,
-    ]),
-  );
-  const modelFqnLookup = new Map<string, string>(
-    ir.models.map((m) => [
-      m.name,
-      `${modelsNamespace}\\${resolveTypeIdent({
-        schemaName: m.name,
-        override: m.annotations.name,
-        convention: config.naming.typeNaming,
-      })}`,
-    ]),
-  );
+  const enumFqnLookup = buildEnumIdentLookup(ir, config, enumsNamespace);
+  const modelFqnLookup = buildModelIdentLookup(ir, config, modelsNamespace);
 
   const selfIdent = resolveTypeIdent({
     schemaName: model.name,
@@ -192,115 +198,4 @@ export function renderPhpModel(opts: RenderPhpModelOptions): RenderPhpModelResul
   ].join("\n");
 
   return { source, issues };
-}
-
-function collectFieldExtraTags(field: FieldDef, listElementDoc: string | null): string[] {
-  const tags: string[] = [];
-  // List PHPDoc: `@var array<int, Type>` — PHPStan-shaped narrowing for arrays.
-  if (listElementDoc !== null) {
-    tags.push(`@var array<int, ${listElementDoc}>`);
-  }
-  const nativeTag = buildNativeTypeTag(field.nativeType);
-  if (nativeTag) tags.push(nativeTag);
-  return tags;
-}
-
-/**
- * Returns a PHP expression for the field's constructor default, or null if
- * the field requires a constructor argument (no representable default).
- *
- * Mirrors the ts-shared default-handling rules:
- *   - Lists default to `[]`.
- *   - Nullable scalars without a Prisma default get `null`.
- *   - Literal defaults emit only when the value's runtime type matches the
- *     field's scalar — guards against the "Int 90 on a DateTime field" footgun.
- *   - `now()` becomes `new \DateTimeImmutable()`.
- *   - Other function defaults (cuid/uuid/autoincrement) → null; the field
- *     becomes a required constructor argument.
- */
-function formatPhpDefault(
-  field: FieldDef,
-  enumFqnLookup: ReadonlyMap<string, string>,
-  uses: UseCollector,
-): string | null {
-  if (field.isList) return "[]";
-
-  if (!field.isRequired && !field.hasDefaultValue) return "null";
-
-  if (!field.hasDefaultValue || !field.default) return null;
-
-  const d = field.default;
-
-  if (d.kind === "literal") {
-    return formatLiteralDefault(field, d.value, enumFqnLookup, uses);
-  }
-
-  if (d.kind === "list") return "[]";
-
-  // d.kind === "function" — only `now()` has a PHP-representable value.
-  if (d.name === "now") return "new \\DateTimeImmutable()";
-
-  return null;
-}
-
-function formatLiteralDefault(
-  field: FieldDef,
-  value: string | number | boolean | null,
-  enumFqnLookup: ReadonlyMap<string, string>,
-  uses: UseCollector,
-): string | null {
-  if (value === null) return "null";
-
-  if (typeof value === "string") {
-    if (field.type.kind === "scalar" && field.type.scalar === "String") {
-      return phpSingleQuoteString(value);
-    }
-    if (field.type.kind === "enum") {
-      const enumFqn = enumFqnLookup.get(field.type.enumName);
-      if (!enumFqn) return null;
-      const shortName = uses.add(enumFqn);
-      return `${shortName}::${value}`;
-    }
-    // String literal on a non-String/non-enum scalar is the "Int 90 →
-    // DateTime" class of footgun. Refuse to fabricate a value.
-    return null;
-  }
-
-  if (typeof value === "number") {
-    if (field.type.kind === "scalar" && field.type.scalar === "Int") {
-      return String(value);
-    }
-    if (field.type.kind === "scalar" && field.type.scalar === "Float") {
-      // Preserve the "this is a float literal" intent that the schema
-      // author expressed. Prisma's DMMF coerces `@default(1.0)` to the JS
-      // number `1`, so `String(1)` would emit `1` and lose the decimal
-      // point. PHP accepts `int` → `float` widening at the type level,
-      // but `1.0` reads more honestly in the generated source for a
-      // float-typed property.
-      return Number.isInteger(value) ? `${value}.0` : String(value);
-    }
-    // Numeric defaults on BigInt / Decimal / DateTime need wrapping that
-    // doesn't fit neatly inline in a PHP constructor param default. Skip;
-    // the field becomes a required constructor arg.
-    return null;
-  }
-
-  if (typeof value === "boolean") {
-    if (field.type.kind === "scalar" && field.type.scalar === "Boolean") {
-      return value ? "true" : "false";
-    }
-    return null;
-  }
-
-  return null;
-}
-
-/**
- * Render a PHP single-quoted string literal. Single quotes don't process
- * escapes other than `\\` and `\'`, so the encoder only needs to escape
- * those two characters.
- */
-function phpSingleQuoteString(value: string): string {
-  const escaped = value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-  return `'${escaped}'`;
 }

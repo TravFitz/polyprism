@@ -22,11 +22,11 @@
 import { Decimal } from "@prisma/client/runtime/library";
 import { describe, expect, it } from "vitest";
 
-import { Address } from "../../../examples/domain-class-showcase/generated/Address.js";
-import { Customer } from "../../../examples/domain-class-showcase/generated/Customer.js";
-import { CustomerTier } from "../../../examples/domain-class-showcase/generated/enums/CustomerTier.js";
-import { OrderStatus } from "../../../examples/domain-class-showcase/generated/enums/OrderStatus.js";
-import { Order } from "../../../examples/domain-class-showcase/generated/Order.js";
+import { Address } from "../../../examples/ts/domain-class-showcase/generated/Address.js";
+import { Customer } from "../../../examples/ts/domain-class-showcase/generated/Customer.js";
+import { CustomerTier } from "../../../examples/ts/domain-class-showcase/generated/enums/CustomerTier.js";
+import { OrderStatus } from "../../../examples/ts/domain-class-showcase/generated/enums/OrderStatus.js";
+import { Order } from "../../../examples/ts/domain-class-showcase/generated/Order.js";
 
 // Minimal valid init shape — reused across tests so each one focuses on a
 // single behaviour.

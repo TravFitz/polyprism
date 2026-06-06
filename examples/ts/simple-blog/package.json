@@ -1,5 +1,5 @@
 {
-  "name": "polyprism-example-simple-blog",
+  "name": "polyprism-example-ts-simple-blog",
   "version": "0.0.0",
   "private": true,
   "description": "Minimal example: a basic blog schema (User, Post, Comment + one enum) showing PolyPrism's defaults.",

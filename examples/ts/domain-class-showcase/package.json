@@ -1,5 +1,5 @@
 {
-  "name": "polyprism-example-domain-class-showcase",
+  "name": "polyprism-example-ts-domain-class-showcase",
   "version": "0.0.0",
   "private": true,
   "description": "Showcase example for ts-domain-class — exercises every coerce-by-default target (Int/Float/Decimal/BigInt/DateTime), every @normalise op, @noCoerce, @hide, @deprecated, JSON types, mixed required/optional, and relations. Billing/orders shape so realistic shopify-duty-tax-style boundaries land naturally.",
