@@ -3,13 +3,32 @@
 # GitHub repo (`polyprism-runtime-php`) and tagging the new release there.
 # Packagist watches that standalone repo and auto-publishes on tag push.
 #
-# Triggered manually via the Actions UI — pick the version you want to
-# ship (e.g. "0.2.0"), the action does the rest. Manual dispatch (vs auto
-# on every push to `packages/runtime-php/**`) is deliberate: the npm and
-# Composer release cadences don't have to march in lockstep, and an
-# automated-on-every-push pipeline would publish patch versions every
-# time the runtime got even a doc tweak. Manual = "I'm explicitly cutting
-# a Composer release."
+# Two triggers — same workflow, same job, picks the version source based
+# on which one fired:
+#
+#   1. **Tag push** (the routine path): push a tag named
+#      `runtime-php-vX.Y.Z` to the monorepo's main and the workflow runs
+#      automatically. Strips `runtime-php-v` off the tag name to get the
+#      SemVer string. Intended use:
+#
+#          git tag runtime-php-v0.2.1
+#          git push origin runtime-php-v0.2.1
+#
+#      The prefix exists so this trigger doesn't fire for the per-package
+#      npm tags changesets creates (`@polyprism/runtime@0.2.1`) or any
+#      other tag scheme. Only `runtime-php-v*` tags are signal.
+#
+#   2. **Workflow dispatch** (the override path): click "Run workflow" in
+#      the Actions UI, type the version manually. Has a `dry_run` flag for
+#      validating the workflow without actually publishing. Useful for
+#      emergencies, recovering from a botched tag, or first-time testing.
+#
+# Why this isn't "auto-publish on every push to packages/runtime-php/**":
+# every commit (including doc tweaks, comment edits, .gitignore changes)
+# would become a Packagist release. Once published, version numbers can't
+# be reused — so accidental releases pollute the version namespace
+# forever. Tag-triggered keeps the "I'm shipping a release" decision
+# explicit while still being one shell command end-to-end.
 #
 # **One-time setup before the first run** (see RELEASE.md for the full
 # walk-through, summarised here):
@@ -27,6 +46,10 @@
 name: Release polyprism/runtime to Packagist
 
 on:
+  push:
+    tags:
+      # Routine release path — push a tag like `runtime-php-v0.2.1`.
+      - "runtime-php-v*"
   workflow_dispatch:
     inputs:
       version:
@@ -34,7 +57,7 @@ on:
         required: true
         type: string
       dry_run:
-        description: 'Dry-run mode (split the directory but skip the push + tag)'
+        description: "Dry-run mode (split the directory but skip the push + tag). Only meaningful for workflow_dispatch."
         required: false
         type: boolean
         default: false
@@ -55,28 +78,32 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate version input
-        # SemVer-shape sanity check so a typo doesn't push a malformed tag
-        # to the standalone repo (which would then poison Packagist's
-        # version list). Two-three numeric components, optional pre-release.
+      - name: Resolve version
+        # Single source of truth for the version, regardless of which
+        # trigger fired:
+        #   - workflow_dispatch → user-supplied input
+        #   - push (tag)        → derived from the tag name by stripping
+        #                          the `runtime-php-v` prefix
+        # Both paths funnel through the same SemVer-shape validator so a
+        # typo can't poison Packagist's version list either way.
+        id: version
         run: |
-          set -e
-          v='${{ github.event.inputs.version }}'
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            v='${{ github.event.inputs.version }}'
+            source="workflow_dispatch input"
+          else
+            tag='${{ github.ref_name }}'
+            v="${tag#runtime-php-v}"
+            source="tag ${tag}"
+          fi
           if ! echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
-            echo "::error::Version '$v' is not a valid SemVer string (e.g. 0.2.0 or 0.3.0-rc.1)" >&2
+            echo "::error::Version '$v' (from $source) is not a valid SemVer string (e.g. 0.2.0 or 0.3.0-rc.1)" >&2
             exit 1
           fi
-          echo "Version validated: $v"
-
-      - name: Run a sanity smoke locally before publishing
-        # Belt-and-braces: PHP 8.4 + PHPUnit against the runtime BEFORE
-        # we tag a release. The main CI already runs this on every push,
-        # but verifying it here too means a broken runtime can't reach
-        # Packagist even if main has somehow drifted.
-        run: |
-          set -e
-          # PHP setup — match the runtime's documented floor
-          curl -fsSL https://github.com/shivammathur/setup-php/raw/main/src/scripts/docker-install.sh -o /tmp/setup-php.sh 2>/dev/null || true
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "source=$source" >> "$GITHUB_OUTPUT"
+          echo "::notice::Resolved version v$v (from $source)"
 
       - name: Set up PHP 8.4 (matches the runtime floor)
         uses: shivammathur/setup-php@v2
@@ -85,18 +112,25 @@ jobs:
           tools: composer:v2
 
       - name: PHPUnit against the runtime
+        # Belt-and-braces: PHP 8.4 + PHPUnit against the runtime BEFORE
+        # we tag a release. The main CI already runs this on every push,
+        # but verifying it here too means a broken runtime can't reach
+        # Packagist even if main has somehow drifted between the tag and
+        # the workflow trigger.
         working-directory: packages/runtime-php
         run: |
           composer install --no-progress --no-interaction
           vendor/bin/phpunit
 
       - name: Split packages/runtime-php into the standalone repo + tag
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+        # Dry-run only applies to workflow_dispatch; tag-triggered runs
+        # always publish (the tag is the intent signal).
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true' }}
         uses: symplify/monorepo-split-github-action@v2.3.0
         env:
           GITHUB_TOKEN: ${{ secrets.RUNTIME_PHP_PUSH_TOKEN }}
         with:
-          tag: v${{ github.event.inputs.version }}
+          tag: v${{ steps.version.outputs.version }}
           package_directory: packages/runtime-php
           repository_organization: TravFitz
           repository_name: polyprism-runtime-php
@@ -108,20 +142,21 @@ jobs:
           user_email: 41898282+github-actions[bot]@users.noreply.github.com
 
       - name: Dry-run smoke (split but skip push)
-        if: ${{ github.event.inputs.dry_run == 'true' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
         run: |
           echo "::notice::Dry-run mode — skipping the split-and-push step."
-          echo "::notice::Version that would have shipped: v${{ github.event.inputs.version }}"
+          echo "::notice::Version that would have shipped: v${{ steps.version.outputs.version }}"
           echo "::notice::Re-run without dry_run to actually publish."
 
       - name: Summary
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true' }}
         run: |
           {
             echo "## Composer release shipped"
             echo ""
             echo "- **Package:** polyprism/runtime"
-            echo "- **Version:** v${{ github.event.inputs.version }}"
+            echo "- **Version:** v${{ steps.version.outputs.version }}"
+            echo "- **Trigger:** ${{ steps.version.outputs.source }}"
             echo "- **Standalone repo:** https://github.com/TravFitz/polyprism-runtime-php"
             echo "- **Packagist:** https://packagist.org/packages/polyprism/runtime"
             echo ""
