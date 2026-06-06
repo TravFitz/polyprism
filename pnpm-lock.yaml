@@ -30,37 +30,11 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@25.9.1)(jiti@2.7.0)
 
-  examples/complex-ecommerce:
-    dependencies:
-      '@polyprism/ts-interface':
-        specifier: workspace:*
-        version: link:../../packages/ts-interface
-    devDependencies:
-      prisma:
-        specifier: ^6.19.3
-        version: 6.19.3(magicast@0.3.5)(typescript@5.9.3)
-
-  examples/domain-class-showcase:
-    dependencies:
-      '@polyprism/runtime':
-        specifier: workspace:*
-        version: link:../../packages/runtime
-      '@polyprism/ts-domain-class':
-        specifier: workspace:*
-        version: link:../../packages/ts-domain-class
-      '@prisma/client':
-        specifier: ^6.19.3
-        version: 6.19.3(prisma@6.19.3(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3)
-    devDependencies:
-      prisma:
-        specifier: ^6.19.3
-        version: 6.19.3(magicast@0.3.5)(typescript@5.9.3)
-
-  examples/php-class-showcase:
+  examples/php/class-showcase:
     dependencies:
       '@polyprism/php-class':
         specifier: workspace:*
-        version: link:../../packages/php-class
+        version: link:../../../packages/php-class
       '@prisma/client':
         specifier: ^6.19.3
         version: 6.19.3(prisma@6.19.3(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3)
@@ -69,21 +43,60 @@ importers:
         specifier: ^6.19.3
         version: 6.19.3(magicast@0.3.5)(typescript@5.9.3)
 
-  examples/simple-blog:
+  examples/php/domain-class-showcase:
     dependencies:
-      '@polyprism/ts-type':
+      '@polyprism/php-domain-class':
         specifier: workspace:*
-        version: link:../../packages/ts-type
+        version: link:../../../packages/php-domain-class
+      '@prisma/client':
+        specifier: ^6.19.3
+        version: 6.19.3(prisma@6.19.3(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3)
     devDependencies:
       prisma:
         specifier: ^6.19.3
         version: 6.19.3(magicast@0.3.5)(typescript@5.9.3)
 
-  examples/task-tracker:
+  examples/ts/complex-ecommerce:
+    dependencies:
+      '@polyprism/ts-interface':
+        specifier: workspace:*
+        version: link:../../../packages/ts-interface
+    devDependencies:
+      prisma:
+        specifier: ^6.19.3
+        version: 6.19.3(magicast@0.3.5)(typescript@5.9.3)
+
+  examples/ts/domain-class-showcase:
+    dependencies:
+      '@polyprism/runtime':
+        specifier: workspace:*
+        version: link:../../../packages/runtime
+      '@polyprism/ts-domain-class':
+        specifier: workspace:*
+        version: link:../../../packages/ts-domain-class
+      '@prisma/client':
+        specifier: ^6.19.3
+        version: 6.19.3(prisma@6.19.3(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3)
+    devDependencies:
+      prisma:
+        specifier: ^6.19.3
+        version: 6.19.3(magicast@0.3.5)(typescript@5.9.3)
+
+  examples/ts/simple-blog:
+    dependencies:
+      '@polyprism/ts-type':
+        specifier: workspace:*
+        version: link:../../../packages/ts-type
+    devDependencies:
+      prisma:
+        specifier: ^6.19.3
+        version: 6.19.3(magicast@0.3.5)(typescript@5.9.3)
+
+  examples/ts/task-tracker:
     dependencies:
       '@polyprism/ts-class':
         specifier: workspace:*
-        version: link:../../packages/ts-class
+        version: link:../../../packages/ts-class
     devDependencies:
       prisma:
         specifier: ^6.19.3
@@ -96,6 +109,15 @@ importers:
         version: 7.8.0
 
   packages/php-class:
+    dependencies:
+      '@polyprism/core':
+        specifier: workspace:*
+        version: link:../core
+      '@polyprism/php-shared':
+        specifier: workspace:*
+        version: link:../php-shared
+
+  packages/php-domain-class:
     dependencies:
       '@polyprism/core':
         specifier: workspace:*

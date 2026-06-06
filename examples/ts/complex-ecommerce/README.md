@@ -23,7 +23,7 @@ A schema designed to exercise **every** PolyPrism feature in one place.
 
 ```bash
 pnpm install         # from the repo root
-pnpm -F polyprism-example-complex-ecommerce generate
+pnpm -F polyprism-example-ts-complex-ecommerce generate
 ```
 
 Generated files appear in `generated/`:

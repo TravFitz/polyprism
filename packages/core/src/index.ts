@@ -5,6 +5,8 @@
 // emitters parsed IR.
 
 export * from "./annotations/index.js";
+export * from "./coerce/index.js";
+export * from "./diagnostics/index.js";
 export * from "./emitter/index.js";
 export * from "./generator/index.js";
 export * from "./ir/index.js";

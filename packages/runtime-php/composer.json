@@ -1,0 +1,32 @@
+{
+  "name": "polyprism/runtime",
+  "description": "Runtime helpers for PolyPrism's PHP domain-class emitter — Coerce + Normalise utilities used by generated property-hook setters. Zero third-party dependencies.",
+  "type": "library",
+  "license": "MIT",
+  "homepage": "https://github.com/TravFitz/polyprism/tree/main/packages/runtime-php",
+  "authors": [
+    {
+      "name": "Travis Fitzgerald"
+    }
+  ],
+  "require": {
+    "php": "^8.4"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Polyprism\\Runtime\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Polyprism\\Runtime\\Tests\\": "tests/"
+    }
+  },
+  "config": {
+    "sort-packages": true
+  },
+  "minimum-stability": "stable"
+}

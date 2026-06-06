@@ -1,0 +1,138 @@
+// PHP domain-class showcase example.
+//
+// Exercises every behaviour of the `polyprism-php-domain-class` emitter:
+//
+//   - **Default-coerce types** — Int, Float, Decimal, BigInt, DateTime get
+//     property-hook setters that accept widened input types (`int|string`,
+//     `float|int|string`, etc.). The hook calls into Polyprism\Runtime\Coerce
+//     to validate and canonicalise the value.
+//   - **Strict-by-default types** — String, Boolean, enums, relations, Json,
+//     Bytes pass through unchanged (no hook, no widening).
+//   - **`@noCoerce`** opts a default-coerce field out (e.g. `internalSeq`).
+//   - **`@coerce(target)`** opts a strict-by-default field in (e.g.
+//     `legacyExternalId` — a String column that arrives stringified but
+//     should be stored as int after the legacy migration).
+//   - **`@normalise(...)`** transforms string inputs on assignment.
+//   - **`@hide`** removes a field from the class entirely.
+//   - **Inline JSON shapes** generate readonly value classes under
+//     JsonTypes/ — proves the JsonType layer composes cleanly with the
+//     domain-class declarationStyle.
+//   - **Relations** — 1-to-many (Customer ↔ Order) and self-reference
+//     (Order.parentOrder).
+//
+// Pattern: `polyprism-php-domain-class`. Requires PHP 8.4+.
+
+generator polyprismCodegen {
+  provider = "polyprism-php-domain-class"
+  output   = "../generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Enums
+// ───────────────────────────────────────────────────────────────────────────
+
+enum CustomerTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  CANCELLED
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Models
+// ───────────────────────────────────────────────────────────────────────────
+
+/// A customer in the billing system. Exercises every default-coerce target
+/// plus the @normalise op set on String fields.
+model Customer {
+  id          String       @id @default(cuid())
+
+  /// Trimmed + lowercased on assignment. The classic email-normalisation
+  /// shape that ts-domain-class exists to support.
+  /// @normalise(trim, lowercase)
+  email       String
+
+  /// Optional display name with whitespace-only-becomes-null.
+  /// @normalise(trim, nullEmptyToNull)
+  displayName String?
+
+  tier        CustomerTier @default(FREE)
+
+  /// Coerce-by-default Decimal — accepts `string|float|int`, stores `string`.
+  lifetimeSpendCents Decimal
+
+  /// Coerce-by-default Int — accepts `int|string`, stores `int`.
+  loyaltyPoints      Int @default(0)
+
+  /// Strict by default — Boolean has no sane string→bool coercion.
+  active             Boolean @default(true)
+
+  /// Coerce-by-default DateTime.
+  createdAt          DateTime @default(now())
+
+  /// Legacy string column promoted to int via cross-type @coerce.
+  /// Setter accepts `int|string`; storage is `int`.
+  /// @coerce(int)
+  legacyExternalId   String?
+
+  /// Strict-by-default Int — @noCoerce keeps the setter type narrow.
+  /// @noCoerce
+  internalSeq        Int @default(0)
+
+  orders Order[]
+
+  /// Internal hash — never serialise this back to the client.
+  /// @hide
+  passwordHash String
+}
+
+/// A single order. Demonstrates BigInt, Bytes, inline JSON, self-reference,
+/// and Float coercion.
+model Order {
+  id            String      @id @default(cuid())
+
+  /// External order reference from the legacy system — BigInt because
+  /// the old system's IDs exceed 2^32. Coerce-by-default.
+  externalId    BigInt
+
+  status        OrderStatus @default(PENDING)
+
+  totalCents    Int
+
+  /// Float coerces by default.
+  exchangeRate  Float       @default(1.0)
+
+  /// Bytes is strict — no hook.
+  receiptBlob   Bytes?
+
+  /// Inline-named JSON shape — emits to JsonTypes/ShippingDetails.php as
+  /// a `final readonly class`.
+  /// @json(ShippingDetails = { carrier: string, tracking?: string, address: { line1: string, line2?: string, city: string, country: string }, tags: string[] })
+  shipping      Json
+
+  /// Inline-anonymous JSON shape — auto-named OrderRawPayload.
+  /// @json({ source: string, raw: unknown, capturedAt: number })
+  rawPayload    Json?
+
+  placedAt      DateTime    @default(now())
+  shippedAt     DateTime?
+
+  // 1-to-many: every order belongs to a customer.
+  customerId    String
+  customer      Customer    @relation(fields: [customerId], references: [id])
+
+  // Self-reference: a refund order points back at the original.
+  parentOrderId String?
+  parentOrder   Order?      @relation("OrderRefunds", fields: [parentOrderId], references: [id])
+  refunds       Order[]     @relation("OrderRefunds")
+}

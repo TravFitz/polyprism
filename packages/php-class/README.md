@@ -59,7 +59,7 @@ The PHP class shape is the natural mutable counterpart to TypeScript's `ts-class
 
 If you want immutability (value objects), use [`@polyprism/php-readonly`](https://www.npmjs.com/package/@polyprism/php-readonly) instead — same shape, but the class is marked `readonly` and properties can't be reassigned after construction.
 
-For setter-driven `@normalise` / `@coerce` data laundering (the PHP analog of `ts-domain-class`), wait for `@polyprism/php-domain-class` — that'll need PHP 8.4 property hooks and a Composer-published runtime.
+For setter-driven `@normalise` / `@coerce` data laundering (the PHP analog of `ts-domain-class`), use [`@polyprism/php-domain-class`](https://www.npmjs.com/package/@polyprism/php-domain-class) — PHP 8.4 property hooks plus the Composer-published [`polyprism/runtime`](https://packagist.org/packages/polyprism/runtime) helper. Generated setters route untrusted boundary input through `Coerce::int(...)` / `Normalise::apply(...)` automatically.
 
 ## Type mapping
 
@@ -87,7 +87,7 @@ For setter-driven `@normalise` / `@coerce` data laundering (the PHP analog of `t
 | `@deprecated("reason")` | PHPDoc `@deprecated` tag |
 | `@name(NewName)` | Renames the class / property identifier |
 | `@type("\\Brick\\Math\\BigDecimal")` | Overrides the PHP type expression verbatim |
-| `@coerce` / `@normalise` / `@noCoerce` | Recognised but ignored (deferred to `php-domain-class`) |
+| `@coerce` / `@normalise` / `@noCoerce` | Recognised but ignored — honoured by [`@polyprism/php-domain-class`](https://www.npmjs.com/package/@polyprism/php-domain-class) instead |
 | `@json({ ... })` / `@json(Name = { ... })` | Generates a `final readonly class` under `JsonTypes/` and types the field as that class — see [JSON value classes](#json-value-classes) |
 | `@json(SomeType)` / `@json(SomeType from "./path")` | Warning + falls back to `mixed`. TS module imports don't translate to PHP; use `@type` instead |
 
@@ -215,6 +215,7 @@ A future v0.2.x may emit `JsonSerializable::jsonSerialize()` on the generated cl
 
 - [PolyPrism on GitHub](https://github.com/TravFitz/polyprism) — full feature list, annotation reference, side-by-side pattern examples
 - [`@polyprism/php-readonly`](https://www.npmjs.com/package/@polyprism/php-readonly) — same shape but `final readonly class` (PHP 8.2+)
+- [`@polyprism/php-domain-class`](https://www.npmjs.com/package/@polyprism/php-domain-class) — property hooks with active `@coerce` / `@normalise` (PHP 8.4+); pairs with the [`polyprism/runtime`](https://packagist.org/packages/polyprism/runtime) Composer package
 - [Issue tracker](https://github.com/TravFitz/polyprism/issues)
 
 ## License

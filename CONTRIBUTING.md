@@ -22,7 +22,7 @@ polyprism/
 │   ├── ts-interface/      # `export interface User { ... }`
 │   ├── ts-type/           # `export type User = { ... };`
 │   └── ts-class/          # `export class User { ... }`
-├── examples/              # Three example schemas (simple-blog, task-tracker, complex-ecommerce)
+├── examples/              # Example schemas grouped by language (examples/ts/*, examples/php/*)
 ├── .changeset/            # Pending release notes
 └── .github/workflows/     # CI + release
 ```
@@ -59,9 +59,9 @@ pnpm -F "polyprism-example-*" generate
 ```
 
 This invokes `prisma generate` against each example schema and writes the
-output to `examples/<name>/generated/`. The CI matrix job regenerates the
-examples and typechecks the output of `simple-blog` and `task-tracker`
-under both Prisma 6 and Prisma 7.
+output to `examples/<lang>/<name>/generated/`. The CI matrix job regenerates
+the examples and typechecks the output of `ts/simple-blog` and
+`ts/task-tracker` under both Prisma 6 and Prisma 7.
 
 **Schema layout note:** the example fixtures use the Prisma 7 layout —
 `url` lives in a `prisma.config.ts` file at the example root, not inside
@@ -71,10 +71,10 @@ cell mutates each schema in-CI to inject `url = env("DATABASE_URL")`
 back before generating. Both layouts produce identical DMMF for the model
 graph, so the generator code is exercised identically either way.
 
-The three `examples/*/prisma.config.ts` files are intentionally byte-
-identical copies (each example is self-contained so contributors can
-clone-and-run any one of them). If you change one of them, change all
-three to keep them in sync — there's no CI check that enforces this yet.
+The `examples/*/*/prisma.config.ts` files are intentionally byte-identical
+copies (each example is self-contained so contributors can clone-and-run
+any one of them). If you change one of them, change all of them to keep
+them in sync — there's no CI check that enforces this yet.
 
 ## Writing tests
 

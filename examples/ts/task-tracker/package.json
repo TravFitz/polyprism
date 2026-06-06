@@ -1,5 +1,5 @@
 {
-  "name": "polyprism-example-task-tracker",
+  "name": "polyprism-example-ts-task-tracker",
   "version": "0.0.0",
   "private": true,
   "description": "Mid-weight example showcasing the ts-class pattern — class fields with real initializer expressions, definite-assignment for cuid()/now() defaults, enum-value defaults with mixed type/value imports.",

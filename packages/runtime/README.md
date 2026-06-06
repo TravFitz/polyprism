@@ -1,8 +1,10 @@
 # @polyprism/runtime
 
-Runtime helpers used by [`@polyprism/ts-domain-class`](https://www.npmjs.com/package/@polyprism/ts-domain-class) — PolyPrism's opinionated domain-class pattern. Part of [PolyPrism](https://github.com/TravFitz/polyprism).
+Runtime helpers used by [`@polyprism/ts-domain-class`](https://www.npmjs.com/package/@polyprism/ts-domain-class) — PolyPrism's opinionated TypeScript domain-class pattern. Part of [PolyPrism](https://github.com/TravFitz/polyprism).
 
-**ESM-first, with a CJS sibling for legacy test runners. Zero third-party runtime dependencies.** The one PolyPrism runtime dep — only required when you choose the domain-class pattern. Users of `ts-interface`, `ts-type`, and `ts-class` never see this package.
+**ESM-first, with a CJS sibling for legacy test runners. Zero third-party runtime dependencies.** Only required when you choose the TypeScript domain-class pattern. Users of `ts-interface`, `ts-type`, and `ts-class` never see this package.
+
+> **Looking for the PHP equivalent?** The PHP domain-class generator ([`@polyprism/php-domain-class`](https://www.npmjs.com/package/@polyprism/php-domain-class)) is backed by a **separate** Composer-published runtime, [`polyprism/runtime` on Packagist](https://packagist.org/packages/polyprism/runtime). It's a different package on a different registry — `composer require polyprism/runtime`, not `npm i @polyprism/runtime` — but provides the same set of `Coerce` and `Normalise` primitives in PHP shape. See the [runtime-php README](https://github.com/TravFitz/polyprism/tree/main/packages/runtime-php) for the contract.
 
 ESM is the primary contract (`import { coerceInt } from "@polyprism/runtime"`). Vitest, Jest with `--experimental-vm-modules`, Bun, Deno, and any modern bundler all resolve to the ESM entry naturally and need no extra configuration.
 

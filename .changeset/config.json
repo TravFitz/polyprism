@@ -8,10 +8,11 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": [
-    "polyprism-example-simple-blog",
-    "polyprism-example-task-tracker",
-    "polyprism-example-complex-ecommerce",
-    "polyprism-example-domain-class-showcase",
-    "polyprism-example-php-class-showcase"
+    "polyprism-example-ts-simple-blog",
+    "polyprism-example-ts-task-tracker",
+    "polyprism-example-ts-complex-ecommerce",
+    "polyprism-example-ts-domain-class-showcase",
+    "polyprism-example-php-class-showcase",
+    "polyprism-example-php-domain-class-showcase"
   ]
 }

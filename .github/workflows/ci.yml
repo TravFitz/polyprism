@@ -133,7 +133,7 @@ jobs:
         if: matrix.prisma == '6'
         run: |
           set -euo pipefail
-          for schema in examples/*/prisma/schema.prisma; do
+          for schema in examples/*/*/prisma/schema.prisma; do
             if ! grep -q '^  provider = "postgresql"$' "$schema"; then
               echo "::error file=$schema::schema-adapter regex no longer matches — the datasource line layout has changed, update the sed pattern in .github/workflows/ci.yml" >&2
               exit 1
@@ -154,9 +154,11 @@ jobs:
         # the bare and with-path `@json` forms — those reference types the
         # CONSUMER provides (`@json(SeoMeta)`, `@json(X from "./types/...")`),
         # so its generated output is intentionally not self-resolving.
+        # php-* examples are excluded because they emit PHP, not TS — they
+        # have their own lint + smoke steps further down.
         run: |
           set -e
-          for example in examples/simple-blog/generated examples/task-tracker/generated examples/domain-class-showcase/generated; do
+          for example in examples/ts/simple-blog/generated examples/ts/task-tracker/generated examples/ts/domain-class-showcase/generated; do
             echo "::group::Typecheck $example"
             find "$example" -name "*.ts" -type f -print0 \
               | xargs -0 ./node_modules/.bin/tsc \
@@ -175,6 +177,10 @@ jobs:
       # that the php-class package claims is 8.1-compatible. 8.2 is the
       # version the smoke test uses below; pin it explicitly so a future
       # default-version bump doesn't silently change what we test.
+      #
+      # php-domain-class-showcase is excluded from the 8.1 + 8.2 lints
+      # because it emits PHP 8.4 syntax (property hooks) that those PHPs
+      # can't even parse. It has its own 8.4 lint + smoke run below.
       - name: Set up PHP 8.1 (floor)
         uses: shivammathur/setup-php@v2
         with:
@@ -184,7 +190,7 @@ jobs:
       - name: Lint emitted PHP under PHP 8.1 (matches php-class documented floor)
         run: |
           set -e
-          find examples/php-class-showcase/generated -name "*.php" -type f -print0 \
+          find examples/php/class-showcase/generated -name "*.php" -type f -print0 \
             | xargs -0 -n1 php -l
 
       - name: Set up PHP 8.2 (matches php-readonly floor + smoke test target)
@@ -197,11 +203,11 @@ jobs:
         run: |
           set -e
           echo "::group::php -l every emitted .php file"
-          find examples/php-class-showcase/generated -name "*.php" -type f -print0 \
+          find examples/php/class-showcase/generated -name "*.php" -type f -print0 \
             | xargs -0 -n1 php -l
           echo "::endgroup::"
           echo "::group::Drift check (regenerated output must match committed)"
-          git diff --exit-code examples/php-class-showcase/generated
+          git diff --exit-code examples/php/class-showcase/generated
           echo "::endgroup::"
 
       # PSR-4 compliance: drop the showcase generated/ into a throwaway
@@ -217,9 +223,9 @@ jobs:
         run: |
           set -e
           tmp="$(mktemp -d)"
-          cp -r examples/php-class-showcase/generated "$tmp/src"
+          cp -r examples/php/class-showcase/generated "$tmp/src"
           mkdir -p "$tmp/scripts"
-          cp examples/php-class-showcase/scripts/smoke.php "$tmp/scripts/smoke.php"
+          cp examples/php/class-showcase/scripts/smoke.php "$tmp/scripts/smoke.php"
           cat > "$tmp/composer.json" <<'JSON'
           {
               "name": "polyprism/ci-compliance-check",
@@ -235,3 +241,69 @@ jobs:
           echo "::group::Run smoke.php (instantiate + readonly + @hide + json_encode)"
           php scripts/smoke.php
           echo "::endgroup::"
+
+      # PHP 8.4 cell: php-domain-class emits property-hook syntax that is
+      # only valid on 8.4+. The smoke run for this showcase additionally
+      # wires the polyprism/runtime Composer package in via a `path`
+      # repository (mirroring how a downstream consumer would install it
+      # from Packagist) so the property hooks actually execute and the
+      # Coerce / Normalise contracts are verified end-to-end.
+      - name: Set up PHP 8.4 (matches php-domain-class floor)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer:v2
+
+      - name: Lint emitted PHP under PHP 8.4 + drift check (php-domain-class)
+        run: |
+          set -e
+          echo "::group::php -l every emitted .php file"
+          find examples/php/domain-class-showcase/generated -name "*.php" -type f -print0 \
+            | xargs -0 -n1 php -l
+          echo "::endgroup::"
+          echo "::group::Drift check (regenerated output must match committed)"
+          git diff --exit-code examples/php/domain-class-showcase/generated
+          echo "::endgroup::"
+
+      - name: Verify Composer PSR-4 compliance + run domain-class smoke
+        run: |
+          set -e
+          tmp="$(mktemp -d)"
+          cp -r examples/php/domain-class-showcase/generated "$tmp/src"
+          cp -r packages/runtime-php "$tmp/runtime"
+          rm -rf "$tmp/runtime/vendor" "$tmp/runtime/composer.lock"
+          mkdir -p "$tmp/scripts"
+          cp examples/php/domain-class-showcase/scripts/smoke.php "$tmp/scripts/smoke.php"
+          cat > "$tmp/composer.json" <<'JSON'
+          {
+              "name": "polyprism/ci-domain-class-check",
+              "type": "project",
+              "require": {
+                  "php": ">=8.4",
+                  "polyprism/runtime": "@dev"
+              },
+              "repositories": [
+                  { "type": "path", "url": "./runtime", "options": { "symlink": true } }
+              ],
+              "autoload": { "psr-4": { "Generated\\": "src/" } },
+              "minimum-stability": "dev",
+              "prefer-stable": true
+          }
+          JSON
+          cd "$tmp"
+          echo "::group::composer install (with polyprism/runtime via path repo)"
+          composer install --no-progress
+          echo "::endgroup::"
+          echo "::group::composer dump-autoload --strict-psr"
+          composer dump-autoload --strict-psr --optimize
+          echo "::endgroup::"
+          echo "::group::Run smoke.php (hooks fire + coerce + normalise + JsonType + @hide + json_encode)"
+          php scripts/smoke.php
+          echo "::endgroup::"
+
+      - name: Run PHPUnit on polyprism/runtime
+        run: |
+          set -e
+          cd packages/runtime-php
+          composer install --no-progress
+          vendor/bin/phpunit

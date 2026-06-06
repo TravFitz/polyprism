@@ -1,5 +1,5 @@
 {
-  "name": "polyprism-example-complex-ecommerce",
+  "name": "polyprism-example-ts-complex-ecommerce",
   "version": "0.0.0",
   "private": true,
   "description": "Complex example: e-commerce schema exercising every PolyPrism feature — all scalar types, all 4 @json forms, @hide, @deprecated, @name override, self-references, composite indexes.",

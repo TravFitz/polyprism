@@ -12,7 +12,7 @@ A minimal Prisma schema showing PolyPrism's zero-config defaults using the
 
 ```bash
 pnpm install         # from the repo root
-pnpm -F polyprism-example-simple-blog generate
+pnpm -F polyprism-example-ts-simple-blog generate
 ```
 
 Generated files appear in `generated/`:
