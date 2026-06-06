@@ -64,30 +64,51 @@ That's the one-time prep. Now you can run the workflow.
 
 ### Cutting a Composer release
 
-When `packages/runtime-php/` has changes you want to ship as a new Packagist version:
+When `packages/runtime-php/` has changes you want to ship as a new Packagist version, two paths land in the same workflow — pick whichever fits the moment.
 
-**1. Make sure `main` reflects what you want to release.** The workflow splits `packages/runtime-php/` at the current state of the branch it's triggered from (default: `main`). If you have pending changes, merge them first.
+#### Path A: tag-triggered (the routine release path)
 
-**2. Trigger the workflow.**
+**One shell command end-to-end.** Push a tag named `runtime-php-v<VERSION>` to `main` and the workflow auto-fires:
+
+```bash
+# After your changes are merged to main
+git checkout main && git pull
+git tag runtime-php-v0.2.1
+git push origin runtime-php-v0.2.1
+# Done — Packagist will have it in ~90s.
+```
+
+The workflow:
+
+1. Strips `runtime-php-v` off the tag name to get the SemVer
+2. Validates the version is SemVer-shaped (rejects malformed tags so nothing reaches Packagist)
+3. Runs PHPUnit against `packages/runtime-php/` under PHP 8.4
+4. Subtree-splits the directory + tags the standalone repo `v0.2.1`
+5. Packagist's webhook fires within ~60s and the new version goes live
+
+The `runtime-php-v` prefix is what distinguishes this trigger from any other tag pattern (npm changesets creates per-package tags like `@polyprism/runtime@0.2.1` which look superficially similar but DON'T match — those are npm's tags, not yours). Only `runtime-php-v*` tags trigger a Composer publish.
+
+#### Path B: workflow_dispatch (the override path)
+
+Click "Run workflow" in the GitHub Actions UI. Useful when:
+
+- You want the **dry-run flag** (test the workflow without actually publishing — only available on this path)
+- You're recovering from a botched tag (e.g. you pushed `runtime-php-v0.2.1` to a broken commit and need to retry without retagging)
+- You're somewhere without a terminal
+
+How:
 
 - Go to https://github.com/TravFitz/polyprism/actions/workflows/release-composer.yml
 - Click **Run workflow**
 - **Branch:** `main`
-- **Version:** the SemVer string to tag (without the `v` prefix). Examples:
-  - `0.2.0` — first Composer release, aligns with the npm fixed-group version
+- **Version:** SemVer string without the `v` prefix. Examples:
+  - `0.2.0` — first Composer release
   - `0.2.1` — patch bump
   - `0.3.0-rc.1` — release candidate (valid SemVer, Packagist handles it)
-- **Dry-run:** leave off for a real release; toggle on if you want to test the workflow without actually publishing
+- **Dry-run:** leave off for a real release; toggle on to test the workflow without actually publishing
 - Click **Run workflow**
 
-The action:
-
-1. Validates the version is a valid SemVer string
-2. Runs PHPUnit against `packages/runtime-php/` under PHP 8.4 — a release-time sanity check on top of the per-push CI
-3. Subtree-splits `packages/runtime-php/` and pushes its contents to the root of `polyprism-runtime-php`, tagging the new commit `v0.2.0` (or whatever you specified)
-4. Surfaces a summary with links to the standalone repo + Packagist
-
-Total runtime: ~1–2 minutes.
+Same downstream steps as Path A — runs PHPUnit, subtree-splits, tags the standalone repo, Packagist webhook fires. Total runtime ~1–2 minutes either way.
 
 **3. Submit the package to Packagist (first release only).**
 
@@ -102,7 +123,7 @@ Packagist will prompt you to enable a GitHub webhook for auto-updates. **Say yes
 
 **4. Subsequent releases.**
 
-Just step 2 (workflow_dispatch with the new version). The Packagist webhook handles the rest — you should see the new version on https://packagist.org/packages/polyprism/runtime within ~60 seconds of the workflow finishing.
+Just step 2 — push a `runtime-php-v<VERSION>` tag (Path A) or trigger the workflow from the UI (Path B). The Packagist webhook handles the rest — you should see the new version on https://packagist.org/packages/polyprism/runtime within ~60 seconds of the workflow finishing.
 
 If Packagist doesn't update within a few minutes, two recovery paths:
 
