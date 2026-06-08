@@ -1,13 +1,15 @@
 # polyprism/runtime
 
-Runtime helpers for PolyPrism's PHP **domain-class** emitter. Provides the `Coerce` and `Normalise` utilities that generated property-hook setters call into.
+Runtime helpers for PolyPrism's PHP **domain-class** emitter. Provides the `Coerce` and `Normalise` utilities that generated property-hook setters call into — and which you can also use directly in hand-written PHP for boundary-input normalisation.
 
-> You only need this package if you use [`@polyprism/php-domain-class`](https://github.com/TravFitz/polyprism/tree/main/packages/php-domain-class). The other PHP generators (`@polyprism/php-class`, `@polyprism/php-readonly`) emit code with zero runtime dependencies.
+> Primarily designed to back [`@polyprism/php-domain-class`](https://github.com/TravFitz/polyprism/tree/main/packages/php-domain-class)'s generated code. The other PHP generators (`@polyprism/php-class`, `@polyprism/php-readonly`) emit code with zero runtime dependencies — they don't need this package.
 
 ## Requirements
 
-- PHP **8.4** or later (property hooks are the load-bearing feature; there's no point targeting older PHP)
+- **PHP 8.1 or later** for the runtime itself (`Coerce` + `Normalise` use only PHP 8.0-era syntax: union types, `final` classes, untyped class constants)
 - No third-party dependencies
+
+**If you're using `@polyprism/php-domain-class`-generated code:** that generated code uses PHP 8.4 **property hooks** (`public int $x { set(...) { ... } }`) and so requires PHP 8.4+ to run. But the runtime itself is broadly compatible — meaning you can `composer require polyprism/runtime` from a Magento 2.4+, Symfony 6+, or Laravel 10+ project today and use `Coerce::int(...)` / `Normalise::apply(...)` directly in hand-written classes, even if you can't yet adopt the generator's output.
 
 ## Install
 
@@ -15,7 +17,7 @@ Runtime helpers for PolyPrism's PHP **domain-class** emitter. Provides the `Coer
 composer require polyprism/runtime
 ```
 
-The PolyPrism PHP domain-class generator emits `use Polyprism\Runtime\Coerce;` and `use Polyprism\Runtime\Normalise;` at the top of each model file — Composer's PSR-4 autoloader wires them up.
+The PolyPrism PHP domain-class generator emits `use Polyprism\Runtime\Coerce;` and `use Polyprism\Runtime\Normalise;` at the top of each model file — Composer's PSR-4 autoloader wires them up. For hand-written usage, import the same way.
 
 ## What's in the box
 
@@ -61,7 +63,39 @@ Ops are applied in declared order. `apply` ignores `NULL_EMPTY_TO_NULL` (it's on
 
 ## Versioning
 
-`polyprism/runtime` (Composer / Packagist) and `@polyprism/runtime` (npm) are versioned independently — they target different language runtimes and don't share code. The PHP package's floor is PHP 8.4 and will float upward as new PHP versions land useful features. The npm runtime targets Node 22+ and follows the same float-the-floor policy.
+`polyprism/runtime` (Composer / Packagist) and `@polyprism/runtime` (npm) are versioned independently — they target different language runtimes and don't share code. The PHP package's floor is PHP 8.1 (broad Magento/Symfony/Laravel compatibility) and will float upward only when a new PHP feature meaningfully improves the runtime's contract. The npm runtime targets Node 22+ and follows the same float-the-floor policy.
+
+### Hand-written usage example
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Polyprism\Runtime\Coerce;
+use Polyprism\Runtime\Normalise;
+
+final class OrderQuoteRequest
+{
+    public int $totalCents;
+    public string $email;
+    public \DateTimeImmutable $requestedAt;
+
+    public function __construct(int|string $totalCents, string $email, \DateTimeImmutable|string|int $requestedAt)
+    {
+        // Boundary normalisation happens once at construction — no
+        // property hooks required, no PHP 8.4 dependency.
+        $this->totalCents = Coerce::int($totalCents, 'OrderQuoteRequest.totalCents');
+        $this->email = Normalise::apply($email, [Normalise::TRIM, Normalise::LOWERCASE]);
+        $this->requestedAt = Coerce::date($requestedAt, 'OrderQuoteRequest.requestedAt');
+    }
+}
+
+// Stringified ints, dirty emails, ISO date strings — all flow in cleanly:
+$req = new OrderQuoteRequest('12500', '  ADA@EXAMPLE.COM  ', '2026-06-08T12:00:00Z');
+```
+
+This is the pattern Magento module authors / Symfony service constructors / Laravel form-request handlers can adopt on PHP 8.1 today, without waiting for property-hook adoption to land in their framework.
 
 ## License
 

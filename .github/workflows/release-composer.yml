@@ -105,18 +105,19 @@ jobs:
           echo "source=$source" >> "$GITHUB_OUTPUT"
           echo "::notice::Resolved version v$v (from $source)"
 
-      - name: Set up PHP 8.4 (matches the runtime floor)
+      - name: Set up PHP 8.1 (matches the runtime's documented floor)
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.4"
+          php-version: "8.1"
           tools: composer:v2
 
-      - name: PHPUnit against the runtime
-        # Belt-and-braces: PHP 8.4 + PHPUnit against the runtime BEFORE
-        # we tag a release. The main CI already runs this on every push,
-        # but verifying it here too means a broken runtime can't reach
-        # Packagist even if main has somehow drifted between the tag and
-        # the workflow trigger.
+      - name: PHPUnit against the runtime under PHP 8.1
+        # Belt-and-braces: PHPUnit against the runtime under its documented
+        # floor BEFORE we tag a release. The main CI already runs this on
+        # every push, but verifying it here too means a broken runtime
+        # (or one that's silently picked up an 8.2+/8.3+/8.4-only feature)
+        # can't reach Packagist even if main has somehow drifted between
+        # the tag and the workflow trigger.
         working-directory: packages/runtime-php
         run: |
           composer install --no-progress --no-interaction

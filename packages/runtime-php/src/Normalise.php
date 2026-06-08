@@ -22,10 +22,10 @@ namespace Polyprism\Runtime;
  */
 final class Normalise
 {
-    public const string TRIM = 'trim';
-    public const string LOWERCASE = 'lowercase';
-    public const string UPPERCASE = 'uppercase';
-    public const string NULL_EMPTY_TO_NULL = 'nullEmptyToNull';
+    public const TRIM = 'trim';
+    public const LOWERCASE = 'lowercase';
+    public const UPPERCASE = 'uppercase';
+    public const NULL_EMPTY_TO_NULL = 'nullEmptyToNull';
 
     /**
      * Apply normalise ops in order to a non-nullable string field's input.
