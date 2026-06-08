@@ -193,6 +193,20 @@ jobs:
           find examples/php/class-showcase/generated -name "*.php" -type f -print0 \
             | xargs -0 -n1 php -l
 
+      - name: Run PHPUnit on polyprism/runtime under PHP 8.1 (the runtime's documented floor)
+        # The runtime is intentionally compatible with PHP 8.1+ — broader
+        # than `php-domain-class`'s generated code (8.4+) so it can be
+        # consumed by Magento 2.4+, Symfony 6+, Laravel 10+ in hand-written
+        # boundary-normalisation code. This step locks that floor in so
+        # nobody can reintroduce 8.2+/8.3+/8.4-only syntax (typed class
+        # constants, `readonly` properties, property hooks, etc.) without
+        # CI catching it.
+        run: |
+          set -e
+          cd packages/runtime-php
+          composer install --no-progress
+          vendor/bin/phpunit
+
       - name: Set up PHP 8.2 (matches php-readonly floor + smoke test target)
         uses: shivammathur/setup-php@v2
         with:
