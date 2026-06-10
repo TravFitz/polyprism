@@ -1,8 +1,8 @@
 import { coerceBigInt, coerceDate, coerceFloat, coerceInt } from "@polyprism/runtime";
 import { Decimal } from "@prisma/client/runtime/library";
-import type { Customer } from "./Customer.js";
+import { Customer } from "./Customer.js";
 import { OrderStatus } from "./enums/OrderStatus.js";
-import type { OrderItem } from "./OrderItem.js";
+import { OrderItem } from "./OrderItem.js";
 
 export interface OrderInit {
   status?: OrderStatus;
@@ -11,7 +11,7 @@ export interface OrderInit {
   itemCount?: number | string;
   paidAt?: Date | string | number | null;
   customerId: string;
-  customer: Customer;
+  customer?: Customer;
   parentOrderId?: bigint | number | string | null;
   parentOrder?: Order | null;
   refunds?: Order[];
@@ -27,7 +27,7 @@ export class Order {
   #placedAt!: Date;
   #paidAt: Date | null = null;
   #customerId!: string;
-  #customer!: Customer;
+  #customer: Customer | undefined = undefined;
   #parentOrderId: bigint | null = null;
   #parentOrder: Order | null = null;
   #refunds: Order[] = [];
@@ -110,7 +110,7 @@ export class Order {
     this.#customerId = v;
   }
 
-  get customer(): Customer {
+  get customer(): Customer | undefined {
     return this.#customer;
   }
   set customer(v: Customer) {
@@ -157,7 +157,7 @@ export class Order {
     this.itemCount = init.itemCount ?? 0;
     if (init.paidAt !== undefined) this.paidAt = init.paidAt;
     this.customerId = init.customerId;
-    this.customer = init.customer;
+    if (init.customer !== undefined) this.customer = init.customer;
     if (init.parentOrderId !== undefined) this.parentOrderId = init.parentOrderId;
     if (init.parentOrder !== undefined) this.parentOrder = init.parentOrder;
     if (init.refunds !== undefined) this.refunds = init.refunds;
@@ -188,6 +188,26 @@ export class Order {
     const init: Record<string, unknown> = {};
     for (const key of initKeys) {
       if (data[key] !== undefined) init[key] = data[key];
+    }
+    if (init.customer !== undefined && init.customer !== null) {
+      init.customer = init.customer instanceof Customer
+        ? init.customer
+        : Customer.from(init.customer as Record<string, unknown>);
+    }
+    if (init.parentOrder !== undefined && init.parentOrder !== null) {
+      init.parentOrder = init.parentOrder instanceof Order
+        ? init.parentOrder
+        : Order.from(init.parentOrder as Record<string, unknown>);
+    }
+    if (Array.isArray(init.refunds)) {
+      init.refunds = init.refunds.map((v) =>
+        v instanceof Order ? v : Order.from(v as Record<string, unknown>),
+      );
+    }
+    if (Array.isArray(init.items)) {
+      init.items = init.items.map((v) =>
+        v instanceof OrderItem ? v : OrderItem.from(v as Record<string, unknown>),
+      );
     }
     const instance = new Order(init as unknown as OrderInit);
     const assignKeys = ["id", "placedAt"] as const;

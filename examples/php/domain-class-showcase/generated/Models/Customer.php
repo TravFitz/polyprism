@@ -120,7 +120,8 @@ final class Customer
      * request body, a Prisma row, a queue message payload). Routes every
      * field through the constructor so property hooks fire — `@coerce` and
      * `@normalise` rules apply identically to a direct `new Customer(...)`
-     * call.
+     * call. Included relations are recursively hydrated into their
+     * corresponding class instances; already-hydrated instances pass through.
      *
      * **Not a validator.** Required fields missing from `$data` throw
      * `\TypeError` with the field path. Type-mismatched values (e.g. an
@@ -135,6 +136,13 @@ final class Customer
      */
     public static function from(array $data): self
     {
+        $orders = $data['orders'] ?? [];
+        if (is_array($orders)) {
+            $orders = array_map(
+                fn($v) => $v instanceof Order ? $v : Order::from($v),
+                $orders,
+            );
+        }
         return new self(
             id: $data['id'] ?? throw new \TypeError('Customer::from(): missing required field "id"'),
             email: $data['email'] ?? throw new \TypeError('Customer::from(): missing required field "email"'),
@@ -146,7 +154,7 @@ final class Customer
             createdAt: $data['createdAt'] ?? new \DateTimeImmutable(),
             legacyExternalId: $data['legacyExternalId'] ?? null,
             internalSeq: $data['internalSeq'] ?? 0,
-            orders: $data['orders'] ?? [],
+            orders: $orders,
         );
     }
 }

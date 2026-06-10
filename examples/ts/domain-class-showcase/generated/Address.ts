@@ -1,6 +1,6 @@
 import { coerceDate, normalise, normaliseNullable } from "@polyprism/runtime";
 import { Decimal } from "@prisma/client/runtime/library";
-import type { Customer } from "./Customer.js";
+import { Customer } from "./Customer.js";
 
 export interface AddressInit {
   line1: string;
@@ -8,7 +8,7 @@ export interface AddressInit {
   countryCode: string;
   shippingRate?: Decimal | number | string;
   customerId: string;
-  customer: Customer;
+  customer?: Customer;
 }
 
 export class Address {
@@ -18,7 +18,7 @@ export class Address {
   #countryCode!: string;
   #shippingRate!: Decimal;
   #customerId!: string;
-  #customer!: Customer;
+  #customer: Customer | undefined = undefined;
   #createdAt!: Date;
 
   /**
@@ -75,7 +75,7 @@ export class Address {
     this.#customerId = v;
   }
 
-  get customer(): Customer {
+  get customer(): Customer | undefined {
     return this.#customer;
   }
   set customer(v: Customer) {
@@ -103,7 +103,7 @@ export class Address {
     this.countryCode = init.countryCode;
     this.shippingRate = init.shippingRate ?? new Decimal(0);
     this.customerId = init.customerId;
-    this.customer = init.customer;
+    if (init.customer !== undefined) this.customer = init.customer;
   }
 
   /**
@@ -130,6 +130,11 @@ export class Address {
     const init: Record<string, unknown> = {};
     for (const key of initKeys) {
       if (data[key] !== undefined) init[key] = data[key];
+    }
+    if (init.customer !== undefined && init.customer !== null) {
+      init.customer = init.customer instanceof Customer
+        ? init.customer
+        : Customer.from(init.customer as Record<string, unknown>);
     }
     const instance = new Address(init as unknown as AddressInit);
     const assignKeys = ["id", "createdAt"] as const;

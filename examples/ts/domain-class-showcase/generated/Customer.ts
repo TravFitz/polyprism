@@ -1,8 +1,8 @@
 import { coerceDate, normalise, normaliseNullable } from "@polyprism/runtime";
-import type { Address } from "./Address.js";
+import { Address } from "./Address.js";
 import { CustomerTier } from "./enums/CustomerTier.js";
 import type { CustomerLanguageSettings } from "./json-types/CustomerLanguageSettings.js";
-import type { Order } from "./Order.js";
+import { Order } from "./Order.js";
 
 export interface CustomerInit {
   email: string;
@@ -174,6 +174,16 @@ export class Customer {
     const init: Record<string, unknown> = {};
     for (const key of initKeys) {
       if (data[key] !== undefined) init[key] = data[key];
+    }
+    if (init.address !== undefined && init.address !== null) {
+      init.address = init.address instanceof Address
+        ? init.address
+        : Address.from(init.address as Record<string, unknown>);
+    }
+    if (Array.isArray(init.orders)) {
+      init.orders = init.orders.map((v) =>
+        v instanceof Order ? v : Order.from(v as Record<string, unknown>),
+      );
     }
     const instance = new Customer(init as unknown as CustomerInit);
     const assignKeys = ["id", "createdAt"] as const;
