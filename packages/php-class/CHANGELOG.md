@@ -1,5 +1,13 @@
 # @polyprism/php-class
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [a071b16]
+  - @polyprism/php-shared@0.3.1
+  - @polyprism/core@0.3.1
+
 ## 0.3.0
 
 ### Patch Changes
