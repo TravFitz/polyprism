@@ -14,6 +14,7 @@ import {
   litStr,
   makeContext,
   model,
+  relation,
   scalar,
   withAnnotations,
 } from "./test-helpers.js";
@@ -543,6 +544,117 @@ describe("php-domain-class — from() factory", () => {
     const fromBlock = out.slice(out.indexOf("public static function from"));
     expect(fromBlock).toContain("id:");
     expect(fromBlock).not.toContain("secret:");
+  });
+});
+
+// Bug B: Prisma returns included relations as plain associative arrays, not
+// as instances of the related class. Without recursive hydration, those
+// arrays get assigned to typed properties (`public Store $store`), which
+// PHP's strict_types rejects with a TypeError. With the fix, `from()` routes
+// each included relation through `RelType::from(...)` so the constructor
+// sees a real instance.
+describe("php-domain-class — from() recursively hydrates included relations (Bug B)", () => {
+  it("hydrates a required single relation via `Store::from(...)` in a preamble local var", async () => {
+    const { ctx, writer } = makeContext([
+      model("Order", [
+        field("id", scalar("String")),
+        field("storeHash", scalar("String")),
+        field("store", relation("Store")),
+      ]),
+      model("Store", [field("hash", scalar("String"))]),
+    ]);
+    await emitPhpModels(ctx, { declarationStyle: "domain-class" });
+    const out = writer.files.get("Models/Order.php")!;
+    const fromBlock = out.slice(out.indexOf("public static function from"));
+    expect(fromBlock).toContain(
+      `$store = $data['store'] ?? throw new \\TypeError('Order::from(): missing required field "store"');`,
+    );
+    expect(fromBlock).toContain(`if ($store !== null && !($store instanceof Store)) {`);
+    expect(fromBlock).toContain(`$store = Store::from($store);`);
+    // The constructor arg uses the hydrated local, not the raw array key.
+    expect(fromBlock).toContain(`store: $store,`);
+    expect(fromBlock).not.toContain(`store: $data['store']`);
+  });
+
+  it("hydrates a nullable single relation, preserving `null` (no crash on `from(null)`)", async () => {
+    const { ctx, writer } = makeContext([
+      model("Order", [
+        field("id", scalar("String")),
+        field("quote", relation("Quote"), { isRequired: false }),
+      ]),
+      model("Quote", [field("id", scalar("String"))]),
+    ]);
+    await emitPhpModels(ctx, { declarationStyle: "domain-class" });
+    const out = writer.files.get("Models/Order.php")!;
+    const fromBlock = out.slice(out.indexOf("public static function from"));
+    expect(fromBlock).toContain(`$quote = $data['quote'] ?? null;`);
+    // The null guard is what keeps Quote::from(null) from being called.
+    expect(fromBlock).toContain(`if ($quote !== null && !($quote instanceof Quote)) {`);
+    expect(fromBlock).toContain(`$quote = Quote::from($quote);`);
+    expect(fromBlock).toContain(`quote: $quote,`);
+  });
+
+  it("hydrates a list relation via `array_map` over `RelType::from`", async () => {
+    const { ctx, writer } = makeContext([
+      model("User", [
+        field("id", scalar("String")),
+        field("posts", relation("Post"), { isList: true }),
+      ]),
+      model("Post", [field("id", scalar("String"))]),
+    ]);
+    await emitPhpModels(ctx, { declarationStyle: "domain-class" });
+    const out = writer.files.get("Models/User.php")!;
+    const fromBlock = out.slice(out.indexOf("public static function from"));
+    expect(fromBlock).toContain(`$posts = $data['posts'] ?? [];`);
+    expect(fromBlock).toContain(`if (is_array($posts)) {`);
+    expect(fromBlock).toContain(`fn($v) => $v instanceof Post ? $v : Post::from($v),`);
+    expect(fromBlock).toContain(`posts: $posts,`);
+  });
+
+  it("is idempotent — `instanceof` short-circuits when the value is already a class instance", async () => {
+    const { ctx, writer } = makeContext([
+      model("Order", [field("id", scalar("String")), field("store", relation("Store"))]),
+      model("Store", [field("hash", scalar("String"))]),
+    ]);
+    await emitPhpModels(ctx, { declarationStyle: "domain-class" });
+    const out = writer.files.get("Models/Order.php")!;
+    const fromBlock = out.slice(out.indexOf("public static function from"));
+    // The `!($store instanceof Store)` guard short-circuits the `Store::from`
+    // path when the caller passed in a real Store.
+    expect(fromBlock).toContain(`!($store instanceof Store)`);
+  });
+
+  it("handles self-referential relations (no extra `use` needed; short class name is in scope)", async () => {
+    const { ctx, writer } = makeContext([
+      model("Order", [
+        field("id", scalar("String")),
+        field("parentOrder", relation("Order"), { isRequired: false }),
+      ]),
+    ]);
+    await emitPhpModels(ctx, { declarationStyle: "domain-class" });
+    const out = writer.files.get("Models/Order.php")!;
+    expect(out).toContain(`if ($parentOrder !== null && !($parentOrder instanceof Order)) {`);
+    expect(out).toContain(`$parentOrder = Order::from($parentOrder);`);
+  });
+
+  it("leaves non-relation fields on the inline form (no preamble local for scalars)", async () => {
+    const { ctx, writer } = makeContext([
+      model("Order", [
+        field("id", scalar("String")),
+        field("storeHash", scalar("String")),
+        field("store", relation("Store")),
+      ]),
+      model("Store", [field("hash", scalar("String"))]),
+    ]);
+    await emitPhpModels(ctx, { declarationStyle: "domain-class" });
+    const out = writer.files.get("Models/Order.php")!;
+    const fromBlock = out.slice(out.indexOf("public static function from"));
+    // Scalar `id` stays inline on the constructor line.
+    expect(fromBlock).toContain(
+      `id: $data['id'] ?? throw new \\TypeError('Order::from(): missing required field "id"'),`,
+    );
+    // No preamble local var for non-relation fields.
+    expect(fromBlock).not.toMatch(/^\s*\$id = \$data\['id'\]/m);
   });
 });
 

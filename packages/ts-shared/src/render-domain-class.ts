@@ -55,6 +55,14 @@ import {
   resolveTypeFilename,
 } from "@polyprism/core";
 
+function isRelationField(field: FieldDef): boolean {
+  return field.type.kind === "relation";
+}
+
+function isRequiredSingleRelation(field: FieldDef): boolean {
+  return isRelationField(field) && field.isRequired && !field.isList;
+}
+
 import {
   type CoerceDecision,
   type CoerceRulesIssue,
@@ -113,6 +121,10 @@ interface FieldPlan {
     | { kind: "none" }
     | { kind: "prisma-assigned" };
   readonly privateFieldInitializer: string | null; // "= []" / "= null" / null for `!`
+  // For relation fields: the class ident of the related model (e.g. "Post").
+  // null for scalars / enums / non-relation fields. Used to emit recursive
+  // `RelType.from(...)` hydration in `from()`.
+  readonly relationIdent: string | null;
 }
 
 export function renderDomainClass(opts: RenderDomainClassOptions): RenderDomainClassResult {
@@ -155,7 +167,7 @@ export function renderDomainClass(opts: RenderDomainClassOptions): RenderDomainC
       continue;
     }
 
-    const declaredType = mapFieldTsType({
+    const rawDeclaredType = mapFieldTsType({
       field,
       modelSchemaName: model.name,
       imports,
@@ -164,6 +176,10 @@ export function renderDomainClass(opts: RenderDomainClassOptions): RenderDomainC
       modelLookup,
       selfModelIdent: selfIdent,
     });
+
+    const declaredType = isRequiredSingleRelation(field)
+      ? `${rawDeclaredType} | undefined`
+      : rawDeclaredType;
 
     // Surface any parse-time annotation issues (e.g. `@noCoerce(args)` with
     // ignored arguments) with the field path attached.
@@ -175,7 +191,7 @@ export function renderDomainClass(opts: RenderDomainClassOptions): RenderDomainC
       });
     }
 
-    const ruleResult = resolveCoerceDecision(field, model.name, declaredType);
+    const ruleResult = resolveCoerceDecision(field, model.name, rawDeclaredType);
     issues.push(...ruleResult.issues);
 
     // Widen the setter input type to include null when the field is nullable.
@@ -227,6 +243,18 @@ export function renderDomainClass(opts: RenderDomainClassOptions): RenderDomainC
       imports.addValue("@prisma/client/runtime/library", "Decimal");
     }
 
+    // Promote relation imports to value imports so `from()` can call
+    // `RelType.from(...)` and use `instanceof RelType` at runtime. Skip self.
+    let relationIdent: string | null = null;
+    if (field.type.kind === "relation") {
+      const relIdent = modelLookup.get(field.type.modelName) ?? field.type.modelName;
+      relationIdent = relIdent;
+      if (relIdent !== selfIdent) {
+        const filename = resolveTypeFilename(relIdent, config.naming.fileNaming);
+        imports.addValue(`./${filename}.js`, relIdent);
+      }
+    }
+
     plans.push({
       field,
       ident,
@@ -235,6 +263,7 @@ export function renderDomainClass(opts: RenderDomainClassOptions): RenderDomainC
       normaliseOps,
       initFallback,
       privateFieldInitializer: resolvePrivateFieldInitializer(field, initFallback),
+      relationIdent,
     });
   }
 
@@ -506,6 +535,7 @@ function resolvePrivateFieldInitializer(
     if (initFallback.kind === "prisma-assigned") return null;
     return "= null";
   }
+  if (isRequiredSingleRelation(field)) return "= undefined";
   return null; // required — `!` definite assignment
 }
 
@@ -514,6 +544,7 @@ function isInitOptional(plan: FieldPlan): boolean {
   if (plan.field.isList) return true;
   if (!plan.field.isRequired) return true;
   if (plan.initFallback.kind === "default-expr") return true;
+  if (isRequiredSingleRelation(plan.field)) return true;
   return false;
 }
 
@@ -616,7 +647,9 @@ function renderInitAssignment(plan: FieldPlan): string | null {
   }
 
   // Required without a default — must be in init; assign unconditionally.
-  if (field.isRequired && !field.isList) {
+  // Exception: required relations are optional in UserInit (the caller may
+  // not have `include`d them), so they fall through to the guarded path.
+  if (field.isRequired && !field.isList && !isRequiredSingleRelation(field)) {
     return `    this.${ident} = init.${ident};`;
   }
 
@@ -693,6 +726,16 @@ function renderFromMethod(selfIdent: string, plans: readonly FieldPlan[]): strin
   const initKeysLiteral =
     initPlans.length > 0 ? initPlans.map((p) => JSON.stringify(p.ident)).join(", ") : "";
 
+  // Included relations arrive as plain sub-row objects on the Prisma row;
+  // route each through `RelType.from()` so consumers get real class instances,
+  // not raw rows masquerading as instances. Idempotent via `instanceof`.
+  const relationHydrationLines = initPlans
+    .filter((p) => p.relationIdent !== null)
+    .map((p) => renderRelationHydration(p));
+
+  const relationHydrationBlock =
+    relationHydrationLines.length > 0 ? `${relationHydrationLines.join("\n")}\n` : "";
+
   const initFilterBlock =
     initPlans.length > 0
       ? `    const initKeys = [${initKeysLiteral}] as const;\n` +
@@ -700,6 +743,7 @@ function renderFromMethod(selfIdent: string, plans: readonly FieldPlan[]): strin
         `    for (const key of initKeys) {\n` +
         `      if (data[key] !== undefined) init[key] = data[key];\n` +
         `    }\n` +
+        `${relationHydrationBlock}` +
         // Double-cast through `unknown`: TS strict mode refuses the direct
         // `Record<string, unknown>` → `${selfIdent}Init` cast because the
         // types don't sufficiently overlap. We trust the runtime filter
@@ -747,6 +791,30 @@ function renderFromMethod(selfIdent: string, plans: readonly FieldPlan[]): strin
     `${prismaAssignedBlock}` +
     `    return instance;\n` +
     `  }\n`
+  );
+}
+
+function renderRelationHydration(plan: FieldPlan): string {
+  const { ident, relationIdent, field } = plan;
+  if (relationIdent === null) return "";
+  const keyExpr = `init.${ident}`;
+  if (field.isList) {
+    return (
+      `    if (Array.isArray(${keyExpr})) {\n` +
+      `      ${keyExpr} = ${keyExpr}.map((v) =>\n` +
+      `        v instanceof ${relationIdent} ? v : ${relationIdent}.from(v as Record<string, unknown>),\n` +
+      `      );\n` +
+      `    }`
+    );
+  }
+  // Single relation. `null` is a legal value for nullable relations and passes
+  // through untouched; only objects get hydrated.
+  return (
+    `    if (${keyExpr} !== undefined && ${keyExpr} !== null) {\n` +
+    `      ${keyExpr} = ${keyExpr} instanceof ${relationIdent}\n` +
+    `        ? ${keyExpr}\n` +
+    `        : ${relationIdent}.from(${keyExpr} as Record<string, unknown>);\n` +
+    `    }`
   );
 }
 
