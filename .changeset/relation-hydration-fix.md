@@ -1,8 +1,8 @@
 ---
-"@polyprism/ts-shared": minor
-"@polyprism/ts-domain-class": minor
-"@polyprism/php-shared": minor
-"@polyprism/php-domain-class": minor
+"@polyprism/ts-shared": patch
+"@polyprism/ts-domain-class": patch
+"@polyprism/php-shared": patch
+"@polyprism/php-domain-class": patch
 ---
 
 Fix two relation-handling bugs in the domain-class emitters.
