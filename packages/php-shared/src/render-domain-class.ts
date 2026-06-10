@@ -139,6 +139,10 @@ interface FieldPlan {
    * constructor body assigns to it on every construction.
    */
   readonly propertyDefaultExpr: string | null;
+  // Short class name of the related model when this is a relation field,
+  // else null. Used by `from()` to emit recursive hydration through
+  // `RelType::from(...)`.
+  readonly relationIdent: string | null;
 }
 
 export function renderPhpDomainClass(
@@ -245,6 +249,14 @@ export function renderPhpDomainClass(
         ? paramDefaultExpr
         : null;
 
+    let relationIdent: string | null = null;
+    if (field.type.kind === "relation") {
+      const fqn = modelFqnLookup.get(field.type.modelName);
+      if (fqn) {
+        relationIdent = uses.add(fqn);
+      }
+    }
+
     plans.push({
       field,
       ident,
@@ -255,6 +267,7 @@ export function renderPhpDomainClass(
       normaliseOps,
       paramDefaultExpr,
       propertyDefaultExpr,
+      relationIdent,
     });
   }
 
@@ -478,7 +491,19 @@ function renderFromMethod(plans: readonly FieldPlan[], selfIdent: string): strin
   const optional = plans.filter((p) => p.paramDefaultExpr !== null);
   const ordered = [...required, ...optional];
 
-  const argLines = ordered.map((p) => renderFromArg(p, selfIdent));
+  // Relation fields get hydrated into a local var first (so the recursive
+  // `RelType::from(...)` call can run before the constructor sees the value);
+  // everything else stays inline on the constructor-arg line.
+  const preambleLines: string[] = [];
+  const argLines = ordered.map((p) => {
+    if (p.relationIdent !== null) {
+      preambleLines.push(renderRelationHydrationPreamble(p, selfIdent));
+      return `            ${p.ident}: $${p.ident},`;
+    }
+    return renderFromArg(p, selfIdent);
+  });
+
+  const preambleBlock = preambleLines.length > 0 ? `${preambleLines.join("\n")}\n` : "";
 
   return (
     `    /**\n` +
@@ -486,7 +511,8 @@ function renderFromMethod(plans: readonly FieldPlan[], selfIdent: string): strin
     `     * request body, a Prisma row, a queue message payload). Routes every\n` +
     `     * field through the constructor so property hooks fire — \`@coerce\` and\n` +
     `     * \`@normalise\` rules apply identically to a direct \`new ${selfIdent}(...)\`\n` +
-    `     * call.\n` +
+    `     * call. Included relations are recursively hydrated into their\n` +
+    `     * corresponding class instances; already-hydrated instances pass through.\n` +
     `     *\n` +
     `     * **Not a validator.** Required fields missing from \`$data\` throw\n` +
     `     * \`\\TypeError\` with the field path. Type-mismatched values (e.g. an\n` +
@@ -501,6 +527,7 @@ function renderFromMethod(plans: readonly FieldPlan[], selfIdent: string): strin
     `     */\n` +
     `    public static function from(array $data): self\n` +
     `    {\n` +
+    `${preambleBlock}` +
     `        return new self(\n` +
     `${argLines.join("\n")}\n` +
     `        );\n` +
@@ -529,6 +556,45 @@ function renderFromArg(plan: FieldPlan, selfIdent: string): string {
   // and not null". For defaulted fields a passed-null collapses to the
   // default — consistent with PHP's `??` semantics throughout the language.
   return `            ${key}: $data[${keyLiteral}] ?? ${plan.paramDefaultExpr},`;
+}
+
+function renderRelationHydrationPreamble(plan: FieldPlan, selfIdent: string): string {
+  const { ident, relationIdent, field, paramDefaultExpr } = plan;
+  if (relationIdent === null) return "";
+  const keyLiteral = phpSingleQuote(ident);
+  const varName = `$${ident}`;
+
+  if (field.isList) {
+    // Lists default to `[]` (formatPhpDefault returns "[]" for isList), so
+    // paramDefaultExpr is non-null here. `is_array` guards against a caller
+    // passing a non-array value (e.g. an already-hydrated wrapper) — we
+    // hydrate elements only when the value is actually array-shaped.
+    return (
+      `        ${varName} = $data[${keyLiteral}] ?? ${paramDefaultExpr ?? "[]"};\n` +
+      `        if (is_array(${varName})) {\n` +
+      `            ${varName} = array_map(\n` +
+      `                fn($v) => $v instanceof ${relationIdent} ? $v : ${relationIdent}::from($v),\n` +
+      `                ${varName},\n` +
+      `            );\n` +
+      `        }`
+    );
+  }
+
+  // Single relation. Required missing → throw (same shape as the inline
+  // form); nullable / defaulted → fall through to the default expression.
+  const fetchLine =
+    paramDefaultExpr === null
+      ? `        ${varName} = $data[${keyLiteral}] ?? throw new \\TypeError(${phpSingleQuote(
+          `${selfIdent}::from(): missing required field "${ident}"`,
+        )});`
+      : `        ${varName} = $data[${keyLiteral}] ?? ${paramDefaultExpr};`;
+
+  return (
+    `${fetchLine}\n` +
+    `        if (${varName} !== null && !(${varName} instanceof ${relationIdent})) {\n` +
+    `            ${varName} = ${relationIdent}::from(${varName});\n` +
+    `        }`
+  );
 }
 
 function resolveNormaliseOps(

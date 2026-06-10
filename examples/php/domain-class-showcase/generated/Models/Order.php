@@ -124,7 +124,8 @@ final class Order
      * request body, a Prisma row, a queue message payload). Routes every
      * field through the constructor so property hooks fire — `@coerce` and
      * `@normalise` rules apply identically to a direct `new Order(...)`
-     * call.
+     * call. Included relations are recursively hydrated into their
+     * corresponding class instances; already-hydrated instances pass through.
      *
      * **Not a validator.** Required fields missing from `$data` throw
      * `\TypeError` with the field path. Type-mismatched values (e.g. an
@@ -139,13 +140,28 @@ final class Order
      */
     public static function from(array $data): self
     {
+        $customer = $data['customer'] ?? throw new \TypeError('Order::from(): missing required field "customer"');
+        if ($customer !== null && !($customer instanceof Customer)) {
+            $customer = Customer::from($customer);
+        }
+        $parentOrder = $data['parentOrder'] ?? null;
+        if ($parentOrder !== null && !($parentOrder instanceof Order)) {
+            $parentOrder = Order::from($parentOrder);
+        }
+        $refunds = $data['refunds'] ?? [];
+        if (is_array($refunds)) {
+            $refunds = array_map(
+                fn($v) => $v instanceof Order ? $v : Order::from($v),
+                $refunds,
+            );
+        }
         return new self(
             id: $data['id'] ?? throw new \TypeError('Order::from(): missing required field "id"'),
             externalId: $data['externalId'] ?? throw new \TypeError('Order::from(): missing required field "externalId"'),
             totalCents: $data['totalCents'] ?? throw new \TypeError('Order::from(): missing required field "totalCents"'),
             shipping: $data['shipping'] ?? throw new \TypeError('Order::from(): missing required field "shipping"'),
             customerId: $data['customerId'] ?? throw new \TypeError('Order::from(): missing required field "customerId"'),
-            customer: $data['customer'] ?? throw new \TypeError('Order::from(): missing required field "customer"'),
+            customer: $customer,
             status: $data['status'] ?? OrderStatus::PENDING,
             exchangeRate: $data['exchangeRate'] ?? 1.0,
             receiptBlob: $data['receiptBlob'] ?? null,
@@ -153,8 +169,8 @@ final class Order
             placedAt: $data['placedAt'] ?? new \DateTimeImmutable(),
             shippedAt: $data['shippedAt'] ?? null,
             parentOrderId: $data['parentOrderId'] ?? null,
-            parentOrder: $data['parentOrder'] ?? null,
-            refunds: $data['refunds'] ?? [],
+            parentOrder: $parentOrder,
+            refunds: $refunds,
         );
     }
 }

@@ -1,13 +1,13 @@
 import { coerceBigInt, coerceInt, normalise } from "@polyprism/runtime";
 import { Decimal } from "@prisma/client/runtime/library";
-import type { Order } from "./Order.js";
+import { Order } from "./Order.js";
 
 export interface OrderItemInit {
   sku: string;
   quantity?: number | string;
   unitPrice: Decimal | number | string;
   orderId: bigint | number | string;
-  order: Order;
+  order?: Order;
 }
 
 export class OrderItem {
@@ -16,7 +16,7 @@ export class OrderItem {
   #quantity!: number;
   #unitPrice!: Decimal;
   #orderId!: bigint;
-  #order!: Order;
+  #order: Order | undefined = undefined;
 
   /**
    * @remarks Prisma-assigned at insert time — reading on a freshly-constructed instance returns `undefined` until the row has been persisted (and `from()` has hydrated the value back, or Prisma has returned the populated row). The declared type is honest post-insert.
@@ -63,7 +63,7 @@ export class OrderItem {
     this.#orderId = coerceBigInt(v, "OrderItem.orderId");
   }
 
-  get order(): Order {
+  get order(): Order | undefined {
     return this.#order;
   }
   set order(v: Order) {
@@ -80,7 +80,7 @@ export class OrderItem {
     this.quantity = init.quantity ?? 1;
     this.unitPrice = init.unitPrice;
     this.orderId = init.orderId;
-    this.order = init.order;
+    if (init.order !== undefined) this.order = init.order;
   }
 
   /**
@@ -107,6 +107,11 @@ export class OrderItem {
     const init: Record<string, unknown> = {};
     for (const key of initKeys) {
       if (data[key] !== undefined) init[key] = data[key];
+    }
+    if (init.order !== undefined && init.order !== null) {
+      init.order = init.order instanceof Order
+        ? init.order
+        : Order.from(init.order as Record<string, unknown>);
     }
     const instance = new OrderItem(init as unknown as OrderItemInit);
     const assignKeys = ["id"] as const;

@@ -874,3 +874,190 @@ describe('declarationStyle: "domain-class" — builder()', () => {
     expect(out).toContain("paidAt(v: Date | string | number | null): this {");
   });
 });
+
+describe('declarationStyle: "domain-class" — relation field hydration', () => {
+  // Bug A: required-relation slots are only populated when the caller
+  // `include`d the relation in their Prisma query. Treating them as
+  // always-present scalars silently wrote `undefined` to the private slot
+  // (via the unguarded `this.X = init.X` constructor line) while leaving
+  // the getter typed `T` (non-null) — a silent TS lie.
+  describe("Bug A — required-relation constructor + UserInit + getter", () => {
+    it("makes required relations OPTIONAL in UserInit (`store?: Store;`)", async () => {
+      const { ctx, writer } = makeContext([
+        model("Order", [field("storeHash", scalar("String")), field("store", relation("Store"))]),
+        model("Store", [field("hash", scalar("String"))]),
+      ]);
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("Order.ts")!;
+      expect(out).toContain("store?: Store;");
+      // The required scalar stays required (no `?`).
+      expect(out).toContain("storeHash: string;");
+    });
+
+    it("guards the constructor assignment with `if (init.store !== undefined)`", async () => {
+      const { ctx, writer } = makeContext([
+        model("Order", [field("store", relation("Store"))]),
+        model("Store", [field("hash", scalar("String"))]),
+      ]);
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("Order.ts")!;
+      expect(out).toContain("if (init.store !== undefined) this.store = init.store;");
+      expect(out).not.toMatch(/^\s*this\.store = init\.store;\s*$/m);
+    });
+
+    it("widens the getter return type to `T | undefined` for required single relations", async () => {
+      const { ctx, writer } = makeContext([
+        model("Order", [field("store", relation("Store"))]),
+        model("Store", [field("hash", scalar("String"))]),
+      ]);
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("Order.ts")!;
+      expect(out).toContain("get store(): Store | undefined {");
+      // Setter stays narrow — caller writing to the slot already has it.
+      expect(out).toContain("set store(v: Store) {");
+      // Private field carries the widened type and an explicit undefined init.
+      expect(out).toContain("#store: Store | undefined = undefined;");
+    });
+
+    it("does NOT widen required SCALAR getters (only relations)", async () => {
+      const { ctx, writer } = makeContext([model("M", [field("name", scalar("String"))])]);
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("M.ts")!;
+      expect(out).toContain("get name(): string {");
+      expect(out).not.toContain("get name(): string | undefined");
+    });
+
+    it("does NOT widen nullable-relation getters (already honest)", async () => {
+      const { ctx, writer } = makeContext([
+        model("Order", [field("parentOrder", relation("Order"), { isRequired: false })]),
+      ]);
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("Order.ts")!;
+      expect(out).toContain("get parentOrder(): Order | null {");
+      expect(out).not.toContain("Order | null | undefined");
+    });
+
+    it("does NOT widen LIST relation getters (the `= []` initializer is honest)", async () => {
+      const { ctx, writer } = makeContext([
+        model("User", [field("posts", relation("Post"), { isList: true })]),
+        model("Post", [field("id", scalar("String"))]),
+      ]);
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("User.ts")!;
+      expect(out).toContain("get posts(): Post[] {");
+      expect(out).not.toContain("Post[] | undefined");
+    });
+  });
+
+  // Bug B: Prisma returns included relations as plain sub-row objects, not as
+  // instances of the related class. `from()` must recursively hydrate so
+  // consumers get real instances (correct `instanceof`, working methods,
+  // setter coerce/normalise actually running).
+  describe("Bug B — from() recursively hydrates included relations", () => {
+    it("hydrates included single relations via `RelType.from()`", async () => {
+      const { ctx, writer } = makeContext([
+        model("Order", [field("store", relation("Store"))]),
+        model("Store", [field("hash", scalar("String"))]),
+      ]);
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("Order.ts")!;
+      expect(out).toContain("if (init.store !== undefined && init.store !== null) {");
+      expect(out).toContain("init.store = init.store instanceof Store");
+      expect(out).toContain("Store.from(init.store as Record<string, unknown>);");
+    });
+
+    it("hydrates included LIST relations via `.map(RelType.from)`", async () => {
+      const { ctx, writer } = makeContext([
+        model("User", [field("posts", relation("Post"), { isList: true })]),
+        model("Post", [field("id", scalar("String"))]),
+      ]);
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("User.ts")!;
+      expect(out).toContain("if (Array.isArray(init.posts)) {");
+      expect(out).toContain("init.posts = init.posts.map((v) =>");
+      expect(out).toContain("v instanceof Post ? v : Post.from(v as Record<string, unknown>),");
+    });
+
+    it("is idempotent for already-hydrated single relations (instanceof check passes through)", async () => {
+      const { ctx, writer } = makeContext([
+        model("Order", [field("store", relation("Store"))]),
+        model("Store", [field("hash", scalar("String"))]),
+      ]);
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("Order.ts")!;
+      // The ternary form must keep the existing instance untouched.
+      expect(out).toMatch(/init\.store instanceof Store\s*\n\s*\?\s*init\.store/);
+    });
+
+    it("does NOT hydrate scalar / enum fields (no `.from` calls except for relations)", async () => {
+      const { ctx, writer } = makeContext(
+        [
+          model("M", [
+            field("name", scalar("String")),
+            field("count", scalar("Int")),
+            field("role", enumRef("Role")),
+          ]),
+        ],
+        [enumDef("Role", ["MEMBER"])],
+      );
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("M.ts")!;
+      // The general init-filter is the only place `.from` could appear; with
+      // no relation fields, the hydration block is empty.
+      expect(out).not.toMatch(/\.from\(init\.\w+/);
+    });
+
+    it("works for self-referential relations (no import needed; class is in scope)", async () => {
+      const { ctx, writer } = makeContext([
+        model("Order", [
+          field("id", scalar("String"), { hasDefaultValue: true, default: cuidDefault() }),
+          field("parentOrder", relation("Order"), { isRequired: false }),
+        ]),
+      ]);
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("Order.ts")!;
+      expect(out).toContain("init.parentOrder instanceof Order");
+      expect(out).toContain("Order.from(init.parentOrder as Record<string, unknown>);");
+      // No self-import line.
+      expect(out).not.toMatch(/from "\.\/Order\.js"/);
+    });
+
+    it("promotes the relation class import from type-only to value (so `instanceof` + `.from` work at runtime)", async () => {
+      const { ctx, writer } = makeContext([
+        model("Order", [field("store", relation("Store"))]),
+        model("Store", [field("hash", scalar("String"))]),
+      ]);
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("Order.ts")!;
+      // No `import type { Store }` — must be a value import.
+      expect(out).not.toContain("import type { Store }");
+      expect(out).toContain("import { Store }");
+    });
+  });
+
+  describe("nullable + list edge cases", () => {
+    it("preserves `null` for nullable single relations (single-relation guard skips when value is null)", async () => {
+      const { ctx, writer } = makeContext([
+        model("Order", [
+          field("id", scalar("String")),
+          field("parentOrder", relation("Order"), { isRequired: false }),
+        ]),
+      ]);
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("Order.ts")!;
+      // The `!== null` guard is what keeps the null path from calling
+      // `Order.from(null)` (which would crash on `null as Record<...>`).
+      expect(out).toContain("if (init.parentOrder !== undefined && init.parentOrder !== null) {");
+    });
+
+    it("uses `Array.isArray()` rather than `!== undefined` for list relations (no crash on a non-array value)", async () => {
+      const { ctx, writer } = makeContext([
+        model("User", [field("posts", relation("Post"), { isList: true })]),
+        model("Post", [field("id", scalar("String"))]),
+      ]);
+      await emitModels(ctx, { declarationStyle: "domain-class" });
+      const out = writer.files.get("User.ts")!;
+      expect(out).toContain("if (Array.isArray(init.posts)) {");
+    });
+  });
+});
